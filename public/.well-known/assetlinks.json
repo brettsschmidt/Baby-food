@@ -1,0 +1,11 @@
+[
+  {
+    "_comment": "Replace this entire file with the assetlinks.json that `bubblewrap init` outputs. The fingerprint must match the keystore Bubblewrap creates. Without it, the Android TWA shows a Chrome URL bar.",
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.babyfood.twa",
+      "sha256_cert_fingerprints": ["REPLACE_WITH_KEYSTORE_FINGERPRINT"]
+    }
+  }
+]
