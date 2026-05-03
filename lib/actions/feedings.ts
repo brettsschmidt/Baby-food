@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold, getActiveBaby } from "@/lib/queries/household";
+import { notifyHousehold } from "@/lib/push";
 
 const MOODS = ["loved", "liked", "neutral", "disliked", "refused"] as const;
 const METHODS = ["spoon", "self_feed", "bottle", "breast"] as const;
@@ -12,10 +13,49 @@ const METHODS = ["spoon", "self_feed", "bottle", "breast"] as const;
 type Mood = (typeof MOODS)[number];
 type Method = (typeof METHODS)[number];
 
+interface ItemInput {
+  inventoryItemId?: string | null;
+  customFood?: string | null;
+  quantity?: number | null;
+  isFirstTry?: boolean;
+}
+
+function parseItems(formData: FormData): ItemInput[] {
+  // Multi-item form encoding: items[i][...]
+  // We collect them by scanning known keys.
+  const out: Map<string, ItemInput> = new Map();
+  for (const [key, raw] of formData.entries()) {
+    const m = key.match(/^items\[(\d+)\]\[(\w+)\]$/);
+    if (!m) continue;
+    const [, idx, field] = m;
+    const value = String(raw);
+    const cur = out.get(idx) ?? {};
+    if (field === "inventory_item_id") cur.inventoryItemId = value || null;
+    if (field === "custom_food") cur.customFood = value || null;
+    if (field === "quantity") cur.quantity = value ? Number(value) : null;
+    if (field === "is_first_try") cur.isFirstTry = value === "on" || value === "true";
+    out.set(idx, cur);
+  }
+
+  // Backwards-compatible single-item encoding (used by /feedings/new today)
+  if (out.size === 0) {
+    const inventoryItemId = String(formData.get("inventory_item_id") ?? "") || null;
+    const customFood = String(formData.get("custom_food") ?? "").trim() || null;
+    const q = formData.get("quantity");
+    const quantity = q ? Number(q) : null;
+    const isFirstTry = formData.get("is_first_try") === "on";
+    if (inventoryItemId || customFood) {
+      out.set("0", { inventoryItemId, customFood, quantity, isFirstTry });
+    }
+  }
+
+  return Array.from(out.values()).filter((i) => i.inventoryItemId || i.customFood);
+}
+
 export async function logFeeding(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const { householdId, userId } = await requireHousehold(supabase);
-  const baby = await getActiveBaby(supabase, householdId);
+  const baby = await getActiveBaby(supabase, householdId, userId);
   if (!baby) throw new Error("Add a baby first");
 
   const fedAtRaw = String(formData.get("fed_at") ?? "");
@@ -25,9 +65,8 @@ export async function logFeeding(formData: FormData): Promise<void> {
   const methodRaw = String(formData.get("method") ?? "spoon");
   const method = METHODS.includes(methodRaw as Method) ? (methodRaw as Method) : "spoon";
   const notes = String(formData.get("notes") ?? "").trim() || null;
-  const inventoryItemId = String(formData.get("inventory_item_id") ?? "") || null;
-  const customFood = String(formData.get("custom_food") ?? "").trim();
-  const quantity = Number(formData.get("quantity") ?? 1);
+  const photoPath = String(formData.get("photo_path") ?? "") || null;
+  const items = parseItems(formData);
 
   const { data: feeding, error } = await supabase
     .from("feedings")
@@ -39,35 +78,239 @@ export async function logFeeding(formData: FormData): Promise<void> {
       method,
       mood,
       notes,
+      photo_path: photoPath,
     })
     .select("id")
     .single();
 
   if (error || !feeding) throw new Error(error?.message ?? "Failed");
 
-  if (inventoryItemId || customFood) {
-    await supabase.from("feeding_items").insert({
-      feeding_id: feeding.id,
-      inventory_item_id: inventoryItemId,
-      quantity: inventoryItemId ? quantity : null,
-      notes: customFood || null,
+  if (items.length > 0) {
+    await supabase.from("feeding_items").insert(
+      items.map((i) => ({
+        feeding_id: feeding.id,
+        inventory_item_id: i.inventoryItemId ?? null,
+        quantity: i.inventoryItemId ? (i.quantity ?? 1) : null,
+        notes: i.customFood ?? null,
+        is_first_try: i.isFirstTry ?? false,
+      })),
+    );
+  }
+
+  const summary = items
+    .map((i) => i.customFood ?? null)
+    .filter(Boolean)
+    .join(", ") || (items.length ? `${items.length} item(s)` : "feeding");
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "feeding_logged",
+    p_ref_id: feeding.id,
+    p_summary: summary,
+  });
+
+  // Best-effort push to other parents.
+  try {
+    await notifyHousehold(householdId, userId, {
+      title: `${baby.name} just ate`,
+      body: summary,
+      url: "/feedings",
     });
+  } catch {
+    /* push not configured in this environment */
   }
 
   revalidatePath("/feedings");
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
-  redirect("/feedings");
+  redirect(`/feedings?logged=${feeding.id}`);
+}
+
+export async function updateFeeding(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId } = await requireHousehold(supabase);
+
+  const id = String(formData.get("id"));
+  if (!id) throw new Error("Missing id");
+
+  const fedAtRaw = String(formData.get("fed_at") ?? "");
+  const fedAt = fedAtRaw ? new Date(fedAtRaw).toISOString() : null;
+  const moodRaw = String(formData.get("mood") ?? "");
+  const mood = MOODS.includes(moodRaw as Mood) ? (moodRaw as Mood) : null;
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+
+  await supabase
+    .from("feedings")
+    .update({
+      fed_at: fedAt ?? undefined,
+      mood,
+      notes,
+    })
+    .eq("id", id);
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "feeding_edited",
+    p_ref_id: id,
+    p_summary: null,
+  });
+
+  revalidatePath("/feedings");
+  revalidatePath(`/feedings/${id}`);
+  redirect(`/feedings/${id}`);
 }
 
 export async function deleteFeeding(formData: FormData): Promise<void> {
   const supabase = await createClient();
-  await requireHousehold(supabase);
+  const { householdId, userId } = await requireHousehold(supabase);
   const id = String(formData.get("id"));
   if (!id) return;
+
+  // Reverse any inventory_movements this feeding caused, so the freezer
+  // count is restored. Then archive the feeding (soft delete).
+  const { data: moves } = await supabase
+    .from("inventory_movements")
+    .select("inventory_item_id, delta")
+    .eq("feeding_id", id);
+
+  for (const m of moves ?? []) {
+    await supabase.from("inventory_movements").insert({
+      household_id: householdId,
+      inventory_item_id: m.inventory_item_id,
+      delta: -m.delta,
+      reason: "correction",
+      created_by: userId,
+    });
+  }
+
   await supabase
     .from("feedings")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "feeding_deleted",
+    p_ref_id: id,
+    p_summary: null,
+  });
+
   revalidatePath("/feedings");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+}
+
+/** Repeat the user's most recent feeding with a new fed_at = now(). */
+export async function repeatLastFeeding(): Promise<void> {
+  const supabase = await createClient();
+  const { householdId, userId } = await requireHousehold(supabase);
+  const baby = await getActiveBaby(supabase, householdId, userId);
+  if (!baby) return;
+
+  const { data: last } = await supabase
+    .from("feedings")
+    .select(
+      "id, mood, method, notes, feeding_items(inventory_item_id, quantity, notes, is_first_try)",
+    )
+    .eq("household_id", householdId)
+    .eq("baby_id", baby.id)
+    .is("archived_at", null)
+    .order("fed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+    .returns<{
+      id: string;
+      mood: string | null;
+      method: string | null;
+      notes: string | null;
+      feeding_items: {
+        inventory_item_id: string | null;
+        quantity: number | null;
+        notes: string | null;
+        is_first_try: boolean;
+      }[];
+    }>();
+
+  if (!last) return;
+
+  const { data: feeding, error } = await supabase
+    .from("feedings")
+    .insert({
+      household_id: householdId,
+      baby_id: baby.id,
+      fed_at: new Date().toISOString(),
+      fed_by: userId,
+      method: (last.method as Method) ?? "spoon",
+      mood: last.mood as Mood | null,
+      notes: last.notes,
+    })
+    .select("id")
+    .single();
+
+  if (error || !feeding) return;
+
+  if (last.feeding_items.length > 0) {
+    await supabase.from("feeding_items").insert(
+      last.feeding_items.map((i) => ({
+        feeding_id: feeding.id,
+        inventory_item_id: i.inventory_item_id,
+        quantity: i.quantity,
+        notes: i.notes,
+        is_first_try: false,
+      })),
+    );
+  }
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "feeding_logged",
+    p_ref_id: feeding.id,
+    p_summary: "Repeat of last feeding",
+  });
+
+  revalidatePath("/feedings");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
+}
+
+/** Quick-log a single food (used by dashboard chips). */
+export async function quickLogFood(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId, userId } = await requireHousehold(supabase);
+  const baby = await getActiveBaby(supabase, householdId, userId);
+  if (!baby) throw new Error("Add a baby first");
+
+  const inventoryItemId = String(formData.get("inventory_item_id") ?? "") || null;
+  const customFood = String(formData.get("custom_food") ?? "").trim() || null;
+  if (!inventoryItemId && !customFood) return;
+
+  const { data: feeding, error } = await supabase
+    .from("feedings")
+    .insert({
+      household_id: householdId,
+      baby_id: baby.id,
+      fed_at: new Date().toISOString(),
+      fed_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !feeding) return;
+
+  await supabase.from("feeding_items").insert({
+    feeding_id: feeding.id,
+    inventory_item_id: inventoryItemId,
+    quantity: inventoryItemId ? 1 : null,
+    notes: customFood,
+  });
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "feeding_logged",
+    p_ref_id: feeding.id,
+    p_summary: customFood ?? "Quick log",
+  });
+
+  revalidatePath("/feedings");
+  revalidatePath("/inventory");
+  revalidatePath("/dashboard");
 }

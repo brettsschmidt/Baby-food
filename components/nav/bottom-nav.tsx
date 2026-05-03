@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Package, CalendarDays, Utensils, Settings } from "lucide-react";
+import { Home, Package, CalendarDays, Utensils, BarChart3 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ const items = [
   { href: "/inventory", label: "Inventory", icon: Package },
   { href: "/feedings/new", label: "Log", icon: Utensils, primary: true },
   { href: "/planner", label: "Planner", icon: CalendarDays },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/insights", label: "Insights", icon: BarChart3 },
 ];
 
 export function BottomNav() {

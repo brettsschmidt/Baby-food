@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { requireHousehold } from "@/lib/queries/household";
+import { getHouseholdSettings, requireHousehold } from "@/lib/queries/household";
+import { addDays, formatISODate } from "@/lib/dates";
 
 const STORAGES = ["fridge", "freezer", "pantry"] as const;
 const UNITS = ["cube", "jar", "pouch", "g", "ml", "serving"] as const;
@@ -22,8 +23,11 @@ export async function createInventoryItem(formData: FormData): Promise<void> {
   const storageRaw = String(formData.get("storage") ?? "freezer");
   const unitRaw = String(formData.get("unit") ?? "cube");
   const quantity = Number(formData.get("quantity") ?? 0);
-  const expiry = String(formData.get("expiry_date") ?? "") || null;
+  let expiry = String(formData.get("expiry_date") ?? "") || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const lowStockRaw = String(formData.get("low_stock_threshold") ?? "");
+  const lowStock = lowStockRaw ? Number(lowStockRaw) : null;
+  const photoPath = String(formData.get("photo_path") ?? "") || null;
 
   if (!name) throw new Error("Name required");
   if (Number.isNaN(quantity) || quantity < 0) throw new Error("Invalid quantity");
@@ -33,19 +37,46 @@ export async function createInventoryItem(formData: FormData): Promise<void> {
     : "freezer";
   const unit = UNITS.includes(unitRaw as Unit) ? (unitRaw as Unit) : "cube";
 
-  const { error } = await supabase.from("inventory_items").insert({
-    household_id: householdId,
-    name,
-    storage,
-    unit,
-    quantity,
-    initial_quantity: quantity,
-    prep_date: new Date().toISOString().slice(0, 10),
-    expiry_date: expiry,
-    notes,
-  });
+  // Smart expiry default: derive from household setting if user left blank.
+  if (!expiry) {
+    const settings = await getHouseholdSettings(supabase, householdId);
+    const days =
+      storage === "freezer"
+        ? settings.freezerDays
+        : storage === "fridge"
+          ? settings.fridgeDays
+          : settings.pantryDays;
+    expiry = formatISODate(addDays(new Date(), days));
+  }
+
+  const { data: item, error } = await supabase
+    .from("inventory_items")
+    .insert({
+      household_id: householdId,
+      name,
+      storage,
+      unit,
+      quantity,
+      initial_quantity: quantity,
+      prep_date: new Date().toISOString().slice(0, 10),
+      expiry_date: expiry,
+      notes,
+      low_stock_threshold: lowStock,
+      photo_path: photoPath,
+    })
+    .select("id")
+    .single();
 
   if (error) throw new Error(error.message);
+
+  if (item) {
+    await supabase.rpc("log_activity", {
+      p_household_id: householdId,
+      p_kind: "inventory_added",
+      p_ref_id: item.id,
+      p_summary: `${name} (${quantity} ${unit})`,
+    });
+  }
 
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
@@ -80,7 +111,7 @@ export async function adjustInventoryItem(formData: FormData): Promise<void> {
 
 export async function archiveInventoryItem(formData: FormData): Promise<void> {
   const supabase = await createClient();
-  await requireHousehold(supabase);
+  const { householdId } = await requireHousehold(supabase);
   const id = String(formData.get("id"));
   if (!id) return;
 
@@ -88,6 +119,54 @@ export async function archiveInventoryItem(formData: FormData): Promise<void> {
     .from("inventory_items")
     .update({ archived_at: new Date().toISOString() })
     .eq("id", id);
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "inventory_archived",
+    p_ref_id: id,
+    p_summary: null,
+  });
+
+  revalidatePath("/inventory");
+  redirect("/inventory");
+}
+
+export async function bulkArchiveInventory(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId, userId } = await requireHousehold(supabase);
+  const ids = formData.getAll("id").map(String).filter(Boolean);
+  const reasonRaw = String(formData.get("reason") ?? "waste");
+  const reason = REASONS.includes(reasonRaw as Reason) ? (reasonRaw as Reason) : "waste";
+  if (ids.length === 0) return;
+
+  // Insert a movement zero-ing out each item, then archive it.
+  const { data: items } = await supabase
+    .from("inventory_items")
+    .select("id, quantity")
+    .in("id", ids);
+
+  for (const item of items ?? []) {
+    if (item.quantity > 0) {
+      await supabase.from("inventory_movements").insert({
+        household_id: householdId,
+        inventory_item_id: item.id,
+        delta: -item.quantity,
+        reason,
+        created_by: userId,
+      });
+    }
+  }
+  await supabase
+    .from("inventory_items")
+    .update({ archived_at: new Date().toISOString() })
+    .in("id", ids);
+
+  await supabase.rpc("log_activity", {
+    p_household_id: householdId,
+    p_kind: "inventory_archived",
+    p_ref_id: null,
+    p_summary: `Bulk: ${ids.length} items (${reason})`,
+  });
 
   revalidatePath("/inventory");
   redirect("/inventory");

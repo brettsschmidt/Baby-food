@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { CalendarDays, Package, Plus, Utensils } from "lucide-react";
+import { subDays } from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
+import { QuickLog } from "@/components/dashboard/quick-log";
 import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { householdId } = await requireHousehold(supabase);
-  const baby = await getActiveBaby(supabase, householdId);
+  const { householdId, userId } = await requireHousehold(supabase);
+  const baby = await getActiveBaby(supabase, householdId, userId);
 
   type LastFeeding = {
     id: string;
@@ -27,34 +29,64 @@ export default async function DashboardPage() {
     }[];
   };
 
-  const [{ data: lastFeeding }, { data: expiring }, { data: upcomingPlan }] = await Promise.all([
-    supabase
-      .from("feedings")
-      .select("id, fed_at, mood, notes, feeding_items(notes, quantity, inventory_items(name))")
-      .eq("household_id", householdId)
-      .is("archived_at", null)
-      .order("fed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .returns<LastFeeding>(),
-    supabase
-      .from("inventory_items")
-      .select("id, name, quantity, unit, expiry_date")
-      .eq("household_id", householdId)
-      .is("archived_at", null)
-      .gt("quantity", 0)
-      .not("expiry_date", "is", null)
-      .order("expiry_date", { ascending: true })
-      .limit(3),
-    supabase
-      .from("prep_plans")
-      .select("id, scheduled_for, notes, status")
-      .eq("household_id", householdId)
-      .eq("status", "planned")
-      .order("scheduled_for", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  type FavRow = {
+    inventory_item_id: string | null;
+    notes: string | null;
+    inventory_items: { name: string | null } | null;
+  };
+
+  const since = subDays(new Date(), 7).toISOString();
+
+  const [{ data: lastFeeding }, { data: expiring }, { data: upcomingPlan }, { data: favRows }] =
+    await Promise.all([
+      supabase
+        .from("feedings")
+        .select("id, fed_at, mood, notes, feeding_items(notes, quantity, inventory_items(name))")
+        .eq("household_id", householdId)
+        .is("archived_at", null)
+        .order("fed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .returns<LastFeeding>(),
+      supabase
+        .from("inventory_items")
+        .select("id, name, quantity, unit, expiry_date")
+        .eq("household_id", householdId)
+        .is("archived_at", null)
+        .gt("quantity", 0)
+        .not("expiry_date", "is", null)
+        .order("expiry_date", { ascending: true })
+        .limit(3),
+      supabase
+        .from("prep_plans")
+        .select("id, scheduled_for, notes, status")
+        .eq("household_id", householdId)
+        .eq("status", "planned")
+        .order("scheduled_for", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("feeding_items")
+        .select("inventory_item_id, notes, inventory_items(name), feedings!inner(fed_at, household_id, archived_at)")
+        .eq("feedings.household_id", householdId)
+        .is("feedings.archived_at", null)
+        .gte("feedings.fed_at", since)
+        .returns<FavRow[]>(),
+    ]);
+
+  // Tally top-3 most-fed foods this week (by inventory item name OR custom note).
+  const counts = new Map<string, { name: string; inventoryItemId: string | null; count: number }>();
+  for (const r of favRows ?? []) {
+    const name = r.inventory_items?.name ?? r.notes;
+    if (!name) continue;
+    const key = (r.inventory_item_id ?? "") + ":" + name.toLowerCase();
+    const cur = counts.get(key) ?? { name, inventoryItemId: r.inventory_item_id, count: 0 };
+    cur.count += 1;
+    counts.set(key, cur);
+  }
+  const favourites = Array.from(counts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 
   return (
     <>
@@ -82,6 +114,8 @@ export default async function DashboardPage() {
             </h2>
           </div>
         )}
+
+        <QuickLog favourites={favourites} hasLastFeeding={!!lastFeeding} />
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { FeedingItemsField } from "@/components/feedings/feeding-items-field";
+import { PhotoField } from "@/components/photo/photo-field";
 import { logFeeding } from "@/lib/actions/feedings";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
@@ -42,44 +44,7 @@ export default async function NewFeedingPage() {
         }
       />
       <form action={logFeeding} className="flex-1 space-y-4 px-4 py-4 pb-8">
-        <div className="space-y-2">
-          <Label htmlFor="inventory_item_id">From inventory</Label>
-          <select
-            id="inventory_item_id"
-            name="inventory_item_id"
-            className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
-            defaultValue=""
-          >
-            <option value="">— pick or leave empty —</option>
-            {items?.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name} ({i.quantity} {i.unit} left)
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="quantity">Amount</Label>
-            <Input
-              id="quantity"
-              name="quantity"
-              type="number"
-              min="0"
-              step="0.5"
-              defaultValue={1}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="custom_food">Or write it in</Label>
-            <Input
-              id="custom_food"
-              name="custom_food"
-              placeholder="A bite of banana"
-              autoComplete="off"
-            />
-          </div>
-        </div>
+        <FeedingItemsField inventory={items ?? []} />
 
         <div className="space-y-2">
           <Label>Reaction</Label>
@@ -119,6 +84,8 @@ export default async function NewFeedingPage() {
             <Input id="fed_at" name="fed_at" type="datetime-local" defaultValue={nowLocalISO()} />
           </div>
         </div>
+
+        <PhotoField name="photo_path" label="Photo (optional)" />
 
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>

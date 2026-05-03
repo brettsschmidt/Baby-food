@@ -5,7 +5,14 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
-type TableName = "feedings" | "feeding_items" | "inventory_items" | "inventory_movements";
+type TableName =
+  | "feedings"
+  | "feeding_items"
+  | "inventory_items"
+  | "inventory_movements"
+  | "shopping_list_items"
+  | "activity_log"
+  | "recipes";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

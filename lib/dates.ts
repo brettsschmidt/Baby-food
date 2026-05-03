@@ -1,4 +1,12 @@
-import { differenceInDays, formatDistanceToNowStrict, isPast, isToday, isTomorrow } from "date-fns";
+import { addDays as addDaysFn, differenceInDays, formatDistanceToNowStrict, isPast, isToday, isTomorrow } from "date-fns";
+
+export function addDays(d: Date, days: number): Date {
+  return addDaysFn(d, days);
+}
+
+export function formatISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
 
 export function expiryStatus(expiry: string | null | undefined): {
   label: string;

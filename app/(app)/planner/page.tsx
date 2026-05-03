@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Plus, CalendarDays, CheckCircle2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, Copy, Download, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { copyLastWeekPlans } from "@/lib/actions/planner";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
 
@@ -44,6 +45,19 @@ export default async function PlannerPage() {
         }
       />
       <div className="flex-1 space-y-6 px-4 py-4 pb-8">
+        <div className="flex flex-wrap gap-2">
+          <form action={copyLastWeekPlans}>
+            <Button type="submit" size="sm" variant="outline">
+              <Copy className="h-4 w-4" /> Copy last week
+            </Button>
+          </form>
+          <Button asChild size="sm" variant="outline">
+            <a href="/api/calendar" download>
+              <Download className="h-4 w-4" /> Export .ics
+            </a>
+          </Button>
+        </div>
+
         <section className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Upcoming

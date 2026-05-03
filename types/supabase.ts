@@ -1,6 +1,6 @@
 // Stub types. Run `npm run db:types` after linking a Supabase project to
-// regenerate this file from your live schema. The runtime works without it,
-// but you lose end-to-end type safety on table names and columns.
+// regenerate this file. The runtime works without it, but you lose end-to-end
+// type safety on table names and columns.
 
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
@@ -14,6 +14,19 @@ type Unit = "cube" | "jar" | "pouch" | "g" | "ml" | "serving";
 type Texture = "puree" | "mash" | "soft" | "finger";
 type PlanStatus = "planned" | "in_progress" | "done" | "skipped";
 type Reason = "prep" | "feeding" | "waste" | "correction" | "restock";
+type ActivityKind =
+  | "feeding_logged"
+  | "feeding_edited"
+  | "feeding_deleted"
+  | "inventory_added"
+  | "inventory_adjusted"
+  | "inventory_archived"
+  | "prep_planned"
+  | "prep_completed"
+  | "recipe_added"
+  | "recipe_edited"
+  | "baby_added"
+  | "member_joined";
 
 interface Table<Row, Insert = Partial<Row>, Update = Partial<Row>> {
   Row: Row;
@@ -36,6 +49,9 @@ export interface Database {
         id: UUID;
         name: string;
         created_by: UUID | null;
+        default_freezer_expiry_days: number;
+        default_fridge_expiry_days: number;
+        default_pantry_expiry_days: number;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -44,6 +60,14 @@ export interface Database {
         user_id: UUID;
         role: "owner" | "member";
         joined_at: Timestamp;
+      }>;
+      household_member_prefs: Table<{
+        household_id: UUID;
+        user_id: UUID;
+        active_baby_id: UUID | null;
+        notify_on_partner_log: boolean;
+        notify_on_low_stock: boolean;
+        notify_feed_reminder_hours: number | null;
       }>;
       household_invites: Table<{
         id: UUID;
@@ -74,6 +98,7 @@ export interface Database {
         allergens: string[];
         texture: Texture | null;
         notes: string | null;
+        photo_path: string | null;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -91,6 +116,8 @@ export interface Database {
         expiry_date: string | null;
         batch_id: UUID | null;
         notes: string | null;
+        low_stock_threshold: number | null;
+        photo_path: string | null;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -114,6 +141,7 @@ export interface Database {
         notes: string | null;
         completed_at: Timestamp | null;
         created_by: UUID | null;
+        recipe_id: UUID | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -137,6 +165,7 @@ export interface Database {
         mood: Mood | null;
         amount_consumed: number | null;
         notes: string | null;
+        photo_path: string | null;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -148,13 +177,76 @@ export interface Database {
         inventory_item_id: UUID | null;
         quantity: number | null;
         notes: string | null;
+        is_first_try: boolean;
+        created_at: Timestamp;
+      }>;
+      recipes: Table<{
+        id: UUID;
+        household_id: UUID;
+        name: string;
+        description: string | null;
+        min_age_months: number | null;
+        yield_quantity: number | null;
+        yield_unit: Unit | null;
+        prep_minutes: number | null;
+        storage_default: Storage | null;
+        default_expiry_days: number | null;
+        steps: string | null;
+        source_url: string | null;
+        photo_path: string | null;
+        archived_at: Timestamp | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+        updated_at: Timestamp;
+      }>;
+      recipe_ingredients: Table<{
+        id: UUID;
+        recipe_id: UUID;
+        ingredient: string;
+        quantity: string | null;
+        position: number;
+      }>;
+      shopping_list_items: Table<{
+        id: UUID;
+        household_id: UUID;
+        text: string;
+        quantity: string | null;
+        completed_at: Timestamp | null;
+        source_recipe_id: UUID | null;
+        source_prep_plan_id: UUID | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      push_subscriptions: Table<{
+        id: UUID;
+        user_id: UUID;
+        endpoint: string;
+        p256dh: string;
+        auth: string;
+        user_agent: string | null;
+        created_at: Timestamp;
+        last_used_at: Timestamp | null;
+      }>;
+      activity_log: Table<{
+        id: UUID;
+        household_id: UUID;
+        actor_id: UUID | null;
+        kind: ActivityKind;
+        ref_id: UUID | null;
+        summary: string | null;
         created_at: Timestamp;
       }>;
     };
     Views: Record<string, never>;
     Functions: {
-      redeem_invite: {
-        Args: { p_code: string };
+      redeem_invite: { Args: { p_code: string }; Returns: UUID };
+      log_activity: {
+        Args: {
+          p_household_id: UUID;
+          p_kind: ActivityKind;
+          p_ref_id: UUID | null;
+          p_summary: string | null;
+        };
         Returns: UUID;
       };
     };

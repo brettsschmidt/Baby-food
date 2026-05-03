@@ -14,7 +14,12 @@ function tomorrow() {
   return d.toISOString().slice(0, 10);
 }
 
-export default function NewPrepPlanPage() {
+export default async function NewPrepPlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ food_name?: string }>;
+}) {
+  const { food_name } = await searchParams;
   return (
     <>
       <AppHeader
@@ -35,6 +40,7 @@ export default function NewPrepPlanPage() {
             name="food_name"
             required
             autoFocus
+            defaultValue={food_name ?? ""}
             placeholder="Sweet potato puree"
           />
         </div>
