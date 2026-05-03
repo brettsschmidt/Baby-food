@@ -48,15 +48,26 @@ export default async function AdminPage() {
     { count: profileCount },
     { count: feedingCount },
     { count: pushCount },
-    { data: lastErrors },
+    { count: errorCount },
+    { data: lastActivity },
+    { data: errors },
   ] = await Promise.all([
     admin.from("households").select("*", { count: "exact", head: true }),
     admin.from("profiles").select("*", { count: "exact", head: true }),
     admin.from("feedings").select("*", { count: "exact", head: true }).is("archived_at", null),
     admin.from("push_subscriptions").select("*", { count: "exact", head: true }),
     admin
+      .from("error_logs")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", new Date(new Date().getTime() - 24 * 3600 * 1000).toISOString()),
+    admin
       .from("activity_log")
       .select("kind, summary, created_at")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    admin
+      .from("error_logs")
+      .select("id, surface, message, url, created_at")
       .order("created_at", { ascending: false })
       .limit(20),
   ]);
@@ -64,12 +75,36 @@ export default async function AdminPage() {
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-6">
       <h1 className="text-2xl font-semibold">Admin</h1>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label="Households" value={householdCount ?? 0} />
         <Stat label="Profiles" value={profileCount ?? 0} />
         <Stat label="Active feedings" value={feedingCount ?? 0} />
         <Stat label="Push subs" value={pushCount ?? 0} />
+        <Stat label="Errors (24h)" value={errorCount ?? 0} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recent errors</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(errors ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No errors recorded.</p>
+          ) : (
+            <ul className="space-y-1 text-sm">
+              {(errors ?? []).map((e) => (
+                <li key={e.id} className="border-b pb-1 last:border-0">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {new Date(e.created_at).toISOString().slice(0, 16).replace("T", " ")}
+                  </span>{" "}
+                  <strong>[{e.surface}]</strong> {e.message}
+                  {e.url && <span className="block text-xs text-muted-foreground">{e.url}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -77,7 +112,7 @@ export default async function AdminPage() {
         </CardHeader>
         <CardContent>
           <ul className="space-y-1 text-sm">
-            {(lastErrors ?? []).map((r, i) => (
+            {(lastActivity ?? []).map((r, i) => (
               <li key={i} className="border-b pb-1 last:border-0">
                 <span className="font-mono text-xs text-muted-foreground">
                   {new Date(r.created_at).toISOString().slice(0, 16).replace("T", " ")}

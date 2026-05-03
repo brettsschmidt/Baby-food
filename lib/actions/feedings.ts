@@ -134,6 +134,29 @@ export async function logFeeding(formData: FormData): Promise<void> {
     );
   }
 
+  // Bottle / breast session detail (only saved when meaningful values supplied).
+  const bottleMlRaw = String(formData.get("bottle_ml") ?? "").trim();
+  const bottleMl = bottleMlRaw ? Number(bottleMlRaw) : null;
+  const breastSideRaw = String(formData.get("breast_side") ?? "").trim();
+  const breastSide =
+    breastSideRaw === "left" || breastSideRaw === "right" || breastSideRaw === "both"
+      ? (breastSideRaw as "left" | "right" | "both")
+      : null;
+  const durationRaw = String(formData.get("duration_minutes") ?? "").trim();
+  const durationMinutes = durationRaw ? Number(durationRaw) : null;
+
+  if (
+    (method === "bottle" && bottleMl != null && !Number.isNaN(bottleMl)) ||
+    (method === "breast" && (breastSide || durationMinutes != null))
+  ) {
+    await supabase.from("feeding_sessions").insert({
+      feeding_id: feeding.id,
+      bottle_ml: method === "bottle" ? bottleMl : null,
+      breast_side: method === "breast" ? breastSide : null,
+      duration_minutes: durationMinutes,
+    });
+  }
+
   const summary = items
     .map((i) => i.customFood ?? null)
     .filter(Boolean)

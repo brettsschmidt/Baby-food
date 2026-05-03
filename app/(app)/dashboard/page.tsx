@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { QuickLog } from "@/components/dashboard/quick-log";
+import { VoiceButton } from "@/components/voice/voice-button";
 import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
@@ -107,12 +108,15 @@ export default async function DashboardPage() {
       <AppHeader
         title="Baby Food"
         action={
-          <Button asChild size="sm">
-            <Link href="/feedings/new">
-              <Plus className="h-4 w-4" />
-              Log
-            </Link>
-          </Button>
+          <>
+            <VoiceButton />
+            <Button asChild size="sm">
+              <Link href="/feedings/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Log
+              </Link>
+            </Button>
+          </>
         }
       />
       <div className="flex-1 space-y-4 px-4 py-4 pb-8">

@@ -58,30 +58,37 @@ export interface Database {
         accent_emoji: string | null;
         activity_retention_days: number | null;
         shared_foods_opt_in: boolean;
+        theme_mode: "light" | "dark" | "system" | null;
+        units_preference: "metric" | "imperial" | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
       household_members: Table<{
         household_id: UUID;
         user_id: UUID;
-        role: "owner" | "member";
+        role: "owner" | "member" | "caregiver";
         joined_at: Timestamp;
       }>;
       household_member_prefs: Table<{
         household_id: UUID;
         user_id: UUID;
         active_baby_id: UUID | null;
+        active_household_id: UUID | null;
         notify_on_partner_log: boolean;
         notify_on_low_stock: boolean;
         notify_feed_reminder_hours: number | null;
         notify_weekly_digest: boolean;
         digest_send_dow: number | null;
         digest_send_hour: number | null;
+        vitamin_reminder_hours: number | null;
+        iron_reminder_hours: number | null;
+        voice_log_enabled: boolean;
       }>;
       household_invites: Table<{
         id: UUID;
         household_id: UUID;
         code: string;
+        role: "member" | "caregiver";
         created_by: UUID | null;
         expires_at: Timestamp;
         max_uses: number | null;
@@ -301,6 +308,97 @@ export interface Database {
         source_household_id: UUID | null;
         contributed_at: Timestamp;
       }>;
+      supplement_logs: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        kind: "vitamin_d" | "iron" | "other";
+        given_at: Timestamp;
+        dose: string | null;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      feeding_sessions: Table<{
+        feeding_id: UUID;
+        bottle_ml: number | null;
+        breast_side: "left" | "right" | "both" | null;
+        duration_minutes: number | null;
+      }>;
+      readiness_evaluations: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        evaluated_on: string;
+        sits_unsupported: boolean | null;
+        has_head_control: boolean | null;
+        lost_tongue_thrust: boolean | null;
+        shows_interest: boolean | null;
+        can_grasp: boolean | null;
+        ready: boolean | null;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      memories: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID | null;
+        photo_path: string | null;
+        caption: string | null;
+        occurred_on: string;
+        milestone_kind: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      recipe_collections: Table<{
+        id: UUID;
+        household_id: UUID;
+        name: string;
+        description: string | null;
+        is_public_template: boolean;
+        created_by: UUID | null;
+        created_at: Timestamp;
+        updated_at: Timestamp;
+      }>;
+      recipe_collection_items: Table<{
+        collection_id: UUID;
+        recipe_id: UUID;
+        position: number;
+        added_at: Timestamp;
+      }>;
+      share_links: Table<{
+        id: UUID;
+        household_id: UUID;
+        token: string;
+        scope: "feed" | "growth" | "memories" | "all";
+        expires_at: Timestamp;
+        revoked_at: Timestamp | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+        last_viewed_at: Timestamp | null;
+        view_count: number;
+      }>;
+      totp_secrets: Table<{
+        user_id: UUID;
+        secret_encrypted: string;
+        confirmed_at: Timestamp | null;
+        recovery_codes: string[] | null;
+        created_at: Timestamp;
+        updated_at: Timestamp;
+      }>;
+      error_logs: Table<{
+        id: UUID;
+        user_id: UUID | null;
+        household_id: UUID | null;
+        surface: "client" | "server" | "edge";
+        message: string;
+        digest: string | null;
+        stack: string | null;
+        url: string | null;
+        user_agent: string | null;
+        created_at: Timestamp;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -326,6 +424,27 @@ export interface Database {
       };
       prune_activity_log: { Args: { p_household_id: UUID }; Returns: number };
       delete_account: { Args: Record<string, never>; Returns: void };
+      report_error: {
+        Args: {
+          p_surface: "client" | "server" | "edge";
+          p_message: string;
+          p_digest: string | null;
+          p_stack: string | null;
+          p_url: string | null;
+          p_user_agent: string | null;
+          p_household_id: UUID | null;
+        };
+        Returns: UUID;
+      };
+      fetch_share_link: {
+        Args: { p_token: string };
+        Returns: {
+          household_id: UUID;
+          scope: "feed" | "growth" | "memories" | "all";
+          expires_at: Timestamp;
+          revoked: boolean;
+        }[];
+      };
     };
     Enums: Record<string, never>;
   };

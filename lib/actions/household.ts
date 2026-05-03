@@ -50,7 +50,9 @@ export async function redeemInvite(formData: FormData): Promise<void> {
   redirect("/dashboard");
 }
 
-export async function generateInvite(): Promise<{ code?: string; error?: string }> {
+export async function generateInvite(
+  role: "member" | "caregiver" = "member",
+): Promise<{ code?: string; error?: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -65,12 +67,14 @@ export async function generateInvite(): Promise<{ code?: string; error?: string 
 
   if (!membership) return { error: "Not in a household" };
   if (membership.role !== "owner") return { error: "Only the owner can mint invites" };
+  const roleSafe = role === "caregiver" ? "caregiver" : "member";
 
   for (let i = 0; i < 5; i++) {
     const code = generateInviteCode();
     const { error } = await supabase.from("household_invites").insert({
       household_id: membership.household_id,
       code,
+      role: roleSafe,
       created_by: user.id,
     });
     if (!error) {

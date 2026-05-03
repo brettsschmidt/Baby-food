@@ -192,13 +192,23 @@ export default async function CarePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Baby className="h-4 w-4 text-primary" /> Growth
-            </CardTitle>
+            <CardTitle className="text-base">More</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Button asChild variant="outline" className="w-full">
-              <a href="/growth">Open growth log</a>
+          <CardContent className="space-y-2">
+            <Button asChild variant="outline" className="w-full justify-start">
+              <a href="/growth">
+                <Baby className="h-4 w-4" /> Growth log
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <a href="/care/supplements">
+                <Baby className="h-4 w-4" /> Supplements
+              </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <a href="/care/readiness">
+                <Baby className="h-4 w-4" /> Solids readiness
+              </a>
             </Button>
           </CardContent>
         </Card>

@@ -11,6 +11,7 @@ import { formatInviteCode } from "@/lib/invite-code";
 interface Invite {
   id: string;
   code: string;
+  role: "member" | "caregiver";
   expires_at: string;
   use_count: number;
   max_uses: number | null;
@@ -31,11 +32,11 @@ export function InviteManager({
     (i) => !i.revoked_at && new Date(i.expires_at) > new Date() && (i.max_uses == null || i.use_count < i.max_uses),
   );
 
-  const onMint = () => {
+  const onMint = (role: "member" | "caregiver" = "member") => {
     startTransition(async () => {
-      const result = await generateInvite();
+      const result = await generateInvite(role);
       if (result?.error) toast.error(result.error);
-      else toast.success("Invite created");
+      else toast.success(`${role === "caregiver" ? "Caregiver" : "Partner"} invite created`);
     });
   };
 
@@ -69,10 +70,21 @@ export function InviteManager({
 
   return (
     <div className="space-y-3">
-      <Button onClick={onMint} disabled={pending} className="w-full">
-        <RefreshCcw className="h-4 w-4" />
-        {pending ? "Creating…" : "Generate invite code"}
-      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        <Button onClick={() => onMint("member")} disabled={pending} className="w-full">
+          <RefreshCcw className="h-4 w-4" aria-hidden="true" />
+          {pending ? "Creating…" : "Partner invite"}
+        </Button>
+        <Button
+          onClick={() => onMint("caregiver")}
+          disabled={pending}
+          variant="outline"
+          className="w-full"
+        >
+          <RefreshCcw className="h-4 w-4" aria-hidden="true" />
+          Caregiver invite
+        </Button>
+      </div>
 
       {active.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -85,9 +97,14 @@ export function InviteManager({
               <code className="font-mono text-2xl font-bold tracking-widest">
                 {formatInviteCode(inv.code)}
               </code>
-              <span className="text-xs text-muted-foreground">
-                Expires {new Date(inv.expires_at).toLocaleDateString()}
-              </span>
+              <div className="flex flex-col items-end gap-1 text-xs">
+                <span className="rounded-full bg-accent px-2 py-0.5 capitalize text-accent-foreground">
+                  {inv.role}
+                </span>
+                <span className="text-muted-foreground">
+                  Expires {new Date(inv.expires_at).toLocaleDateString()}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
               <Button

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FeedingItemsField } from "@/components/feedings/feeding-items-field";
 import { FeedingForm } from "@/components/feedings/feeding-form";
+import { MethodFields } from "@/components/feedings/method-fields";
 import { OfflineBridge } from "@/components/offline/offline-bridge";
 import { PhotoField } from "@/components/photo/photo-field";
 import { createClient } from "@/lib/supabase/server";
@@ -64,6 +65,17 @@ export default async function NewFeedingPage() {
     : { data: null };
   const allergens = babyRow?.known_allergens ?? [];
 
+  const { data: readiness } = baby
+    ? await supabase
+        .from("readiness_evaluations")
+        .select("ready, evaluated_on")
+        .eq("baby_id", baby.id)
+        .order("evaluated_on", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+  const notReady = baby && readiness && !readiness.ready;
+
   return (
     <>
       <AppHeader
@@ -78,6 +90,18 @@ export default async function NewFeedingPage() {
       />
       <FeedingForm>
         <OfflineBridge />
+        {notReady && (
+          <div className="rounded-md border border-amber-300 bg-amber-50/60 p-3 text-xs dark:bg-amber-950/30">
+            <p className="font-medium">{baby?.name} hasn&apos;t been marked ready for solids.</p>
+            <p className="mt-1 text-muted-foreground">
+              Run through the{" "}
+              <Link href="/care/readiness" className="underline">
+                readiness checklist
+              </Link>{" "}
+              first.
+            </p>
+          </div>
+        )}
         {allergens.length > 0 && (
           <div className="rounded-md border border-amber-300 bg-amber-50/60 p-3 text-xs dark:bg-amber-950/30">
             <p className="font-medium">
@@ -109,25 +133,10 @@ export default async function NewFeedingPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="method">Method</Label>
-            <select
-              id="method"
-              name="method"
-              defaultValue="spoon"
-              className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
-            >
-              <option value="spoon">Spoon-fed</option>
-              <option value="self_feed">Self-fed</option>
-              <option value="bottle">Bottle</option>
-              <option value="breast">Breast</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="fed_at">When</Label>
-            <Input id="fed_at" name="fed_at" type="datetime-local" defaultValue={nowLocalISO()} />
-          </div>
+        <MethodFields />
+        <div className="space-y-2">
+          <Label htmlFor="fed_at">When</Label>
+          <Input id="fed_at" name="fed_at" type="datetime-local" defaultValue={nowLocalISO()} />
         </div>
 
         <PhotoField name="photo_path" label="Photo (optional)" />

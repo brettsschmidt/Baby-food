@@ -1,7 +1,19 @@
 import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
-  return {
+  const m: MetadataRoute.Manifest & {
+    share_target?: {
+      action: string;
+      method: string;
+      enctype: string;
+      params: {
+        title?: string;
+        text?: string;
+        url?: string;
+        files?: { name: string; accept: string[] }[];
+      };
+    };
+  } = {
     name: "Baby Food",
     short_name: "Baby Food",
     description: "Plan, make, and log your baby's homemade meals.",
@@ -22,5 +34,17 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     categories: ["food", "health", "lifestyle"],
+    share_target: {
+      action: "/share-receive",
+      method: "POST",
+      enctype: "multipart/form-data",
+      params: {
+        title: "title",
+        text: "text",
+        url: "url",
+        files: [{ name: "image", accept: ["image/*"] }],
+      },
+    },
   };
+  return m;
 }

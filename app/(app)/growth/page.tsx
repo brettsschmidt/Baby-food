@@ -49,9 +49,12 @@ export default async function GrowthPage() {
       <div className="flex-1 space-y-4 px-4 py-4 pb-8">
         <Card>
           <CardContent className="space-y-4 pt-4">
-            <Sparkline points={weightPoints} label="Weight" unit="kg" />
-            <Sparkline points={lengthPoints} label="Length" unit="cm" />
-            <Sparkline points={headPoints} label="Head" unit="cm" />
+            <Sparkline points={weightPoints} label="Weight" unit="kg" metric="weight_kg" />
+            <Sparkline points={lengthPoints} label="Length" unit="cm" metric="length_cm" />
+            <Sparkline points={headPoints} label="Head" unit="cm" metric="head_cm" />
+            <p className="text-[10px] text-muted-foreground">
+              Dashed lines: WHO 3rd / 15th / 85th / 97th percentile bands. Solid grey: median.
+            </p>
           </CardContent>
         </Card>
 

@@ -10,7 +10,12 @@ import { PhotoField } from "@/components/photo/photo-field";
 import { UrlImporter } from "@/components/recipes/url-importer";
 import { createRecipe } from "@/lib/actions/recipes";
 
-export default function NewRecipePage() {
+export default async function NewRecipePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ name?: string; source_url?: string }>;
+}) {
+  const { name, source_url } = await searchParams;
   return (
     <>
       <AppHeader
@@ -27,7 +32,7 @@ export default function NewRecipePage() {
         <UrlImporter />
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
-          <Input id="name" name="name" required autoFocus />
+          <Input id="name" name="name" required autoFocus defaultValue={name ?? ""} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="description">Short description</Label>
@@ -97,7 +102,13 @@ export default function NewRecipePage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="source_url">Source URL</Label>
-          <Input id="source_url" name="source_url" type="url" placeholder="https://" />
+          <Input
+            id="source_url"
+            name="source_url"
+            type="url"
+            placeholder="https://"
+            defaultValue={source_url ?? ""}
+          />
         </div>
         <PhotoField name="photo_path" label="Photo (optional)" />
         <Button type="submit" size="lg" className="w-full">

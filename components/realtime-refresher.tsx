@@ -16,7 +16,10 @@ type TableName =
   | "growth_measurements"
   | "sleep_logs"
   | "diaper_logs"
-  | "milestones";
+  | "milestones"
+  | "supplement_logs"
+  | "memories"
+  | "recipe_collections";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

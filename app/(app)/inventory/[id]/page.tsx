@@ -83,11 +83,16 @@ export default async function InventoryItemPage({
               </form>
               <form action={archiveInventoryItem}>
                 <input type="hidden" name="id" value={item.id} />
-                <Button type="submit" variant="outline" className="w-full">
+                <Button type="submit" variant="outline" className="w-full" aria-label="Archive item">
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </form>
             </div>
+            <Button asChild variant="ghost" size="sm" className="mt-3 w-full">
+              <Link href={`/inventory/${item.id}/label`} target="_blank">
+                Print labels
+              </Link>
+            </Button>
           </CardContent>
         </Card>
 

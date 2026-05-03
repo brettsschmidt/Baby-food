@@ -70,7 +70,7 @@ export default async function SettingsPage() {
       .returns<MemberRow[]>(),
     supabase
       .from("household_invites")
-      .select("id, code, expires_at, use_count, max_uses, revoked_at")
+      .select("id, code, role, expires_at, use_count, max_uses, revoked_at")
       .eq("household_id", householdId)
       .order("created_at", { ascending: false }),
     supabase
@@ -134,6 +134,26 @@ export default async function SettingsPage() {
               <Link href="/print/report?days=30" target="_blank">
                 <FileText className="h-4 w-4" /> Pediatrician report
               </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/settings/security">
+                <FileText className="h-4 w-4" /> Security (2FA)
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/memories">
+                <FileText className="h-4 w-4" /> Memories
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/recipes/collections">
+                <BookOpen className="h-4 w-4" /> Recipe collections
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <a href="/api/data/export" download>
+                <FileText className="h-4 w-4" /> Export all data (ZIP)
+              </a>
             </Button>
           </CardContent>
         </Card>

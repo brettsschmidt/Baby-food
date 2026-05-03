@@ -3,7 +3,16 @@ import { createServerClient } from "@supabase/ssr";
 
 import type { Database } from "@/types/supabase";
 
-const PUBLIC_PATHS = ["/login", "/signup", "/verify", "/auth/callback", "/privacy"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/signup",
+  "/verify",
+  "/auth/callback",
+  "/auth/2fa",
+  "/privacy",
+  "/share",
+  "/share-receive",
+];
 const ONBOARDING_PATH = "/onboarding";
 
 function isPublic(pathname: string) {
@@ -51,6 +60,24 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Enforce 2FA when a confirmed TOTP secret exists.
+  if (user && !pathname.startsWith("/auth/2fa") && !isPublic(pathname) && pathname !== "/") {
+    const passed = request.cookies.get("babyfood_2fa_passed")?.value === "1";
+    if (!passed) {
+      const { data: row } = await supabase
+        .from("totp_secrets")
+        .select("confirmed_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (row?.confirmed_at) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/2fa";
+        url.searchParams.set("next", pathname);
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   // Authenticated but not in a household → force onboarding

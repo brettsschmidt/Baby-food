@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { convertToImperial, convertToMetric } from "@/lib/units";
+
 interface Ingredient {
   id: string;
   ingredient: string;
@@ -33,10 +35,12 @@ export function ScaleIngredients({
   ingredients,
   yieldQuantity,
   yieldUnit,
+  units = "metric",
 }: {
   ingredients: Ingredient[];
   yieldQuantity: number | null;
   yieldUnit: string | null;
+  units?: "metric" | "imperial";
 }) {
   const [factor, setFactor] = useState(1);
   const scaledYield = yieldQuantity != null ? Math.round(yieldQuantity * factor) : null;
@@ -65,12 +69,20 @@ export function ScaleIngredients({
         {ingredients.length === 0 ? (
           <li className="list-none text-muted-foreground">No ingredients listed.</li>
         ) : (
-          ingredients.map((i) => (
-            <li key={i.id}>
-              {i.quantity ? <strong>{scaleQuantity(i.quantity, factor)}</strong> : null}{" "}
-              {i.ingredient}
-            </li>
-          ))
+          ingredients.map((i) => {
+            const scaled = i.quantity ? scaleQuantity(i.quantity, factor) : null;
+            const conv = scaled
+              ? units === "metric"
+                ? convertToMetric(`${scaled} ${i.ingredient}`)
+                : convertToImperial(`${scaled} ${i.ingredient}`)
+              : null;
+            return (
+              <li key={i.id}>
+                {scaled ? <strong>{scaled}</strong> : null} {i.ingredient}
+                {conv && <span className="ml-1 text-xs text-muted-foreground">≈ {conv}</span>}
+              </li>
+            );
+          })
         )}
       </ul>
     </div>

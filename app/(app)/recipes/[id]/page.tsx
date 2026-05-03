@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { archiveRecipe, planRecipe } from "@/lib/actions/recipes";
 import { ScaleIngredients } from "@/components/recipes/scale-ingredients";
 import { createClient } from "@/lib/supabase/server";
-import { requireHousehold } from "@/lib/queries/household";
+import { getHouseholdSettings, requireHousehold } from "@/lib/queries/household";
 
 function tomorrow() {
   const d = new Date();
@@ -59,6 +59,7 @@ export default async function RecipeDetailPage({
 
   if (!recipe) notFound();
   const ingredients = [...(recipe.recipe_ingredients ?? [])].sort((a, b) => a.position - b.position);
+  const settings = await getHouseholdSettings(supabase, householdId);
 
   return (
     <>
@@ -111,6 +112,7 @@ export default async function RecipeDetailPage({
               ingredients={ingredients}
               yieldQuantity={recipe.yield_quantity}
               yieldUnit={recipe.yield_unit}
+              units={settings.units}
             />
           </CardContent>
         </Card>

@@ -13,15 +13,25 @@ export async function updateHouseholdTheme(formData: FormData): Promise<void> {
   const themeColor = String(formData.get("theme_color") ?? "").trim() || null;
   const accentEmoji = String(formData.get("accent_emoji") ?? "").trim() || null;
   const householdName = String(formData.get("name") ?? "").trim();
+  const themeModeRaw = String(formData.get("theme_mode") ?? "");
+  const unitsRaw = String(formData.get("units_preference") ?? "");
 
   const update: {
     theme_color?: string;
     accent_emoji?: string;
     name?: string;
+    theme_mode?: "light" | "dark" | "system";
+    units_preference?: "metric" | "imperial";
   } = {};
   if (themeColor) update.theme_color = themeColor;
   if (accentEmoji) update.accent_emoji = accentEmoji;
   if (householdName) update.name = householdName;
+  if (themeModeRaw === "light" || themeModeRaw === "dark" || themeModeRaw === "system") {
+    update.theme_mode = themeModeRaw;
+  }
+  if (unitsRaw === "metric" || unitsRaw === "imperial") {
+    update.units_preference = unitsRaw;
+  }
   if (Object.keys(update).length === 0) return;
 
   await supabase.from("households").update(update).eq("id", householdId);

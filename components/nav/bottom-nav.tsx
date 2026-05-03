@@ -17,7 +17,10 @@ const items = [
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="sticky bottom-0 z-30 border-t bg-background/95 backdrop-blur safe-bottom">
+    <nav
+      className="sticky bottom-0 z-30 border-t bg-background/95 backdrop-blur safe-bottom"
+      aria-label="Primary"
+    >
       <ul className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 pt-2">
         {items.map(({ href, label, icon: Icon, primary }) => {
           const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
@@ -25,8 +28,10 @@ export function BottomNav() {
             <li key={href} className="flex">
               <Link
                 href={href}
+                aria-current={active ? "page" : undefined}
+                aria-label={label}
                 className={cn(
-                  "flex w-full flex-col items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-medium transition-colors",
+                  "flex w-full flex-col items-center justify-center gap-1 rounded-md py-1.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   active ? "text-primary" : "text-muted-foreground hover:text-foreground",
                   primary && "relative",
                 )}
@@ -38,7 +43,7 @@ export function BottomNav() {
                     primary && active && "ring-2 ring-primary ring-offset-2 ring-offset-background",
                   )}
                 >
-                  <Icon className={cn("h-5 w-5", primary && "h-5 w-5")} />
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <span>{label}</span>
               </Link>
