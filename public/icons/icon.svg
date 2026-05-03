@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+    <rect width="512" height="512" rx="92.16" fill="#ffffff"/>
+    <g transform="translate(256, 281.6)">
+      <!-- Carrot body -->
+      <path d="M 0 163.84 L 92.16 -61.44 L -92.16 -61.44 Z"
+            fill="#f59e0b" stroke="#b45309" stroke-width="6.144" stroke-linejoin="round"/>
+      <!-- Body grooves -->
+      <line x1="-51.2" y1="-20.48" x2="-30.72" y2="20.48" stroke="#b45309" stroke-width="4.096" stroke-linecap="round"/>
+      <line x1="20.48" y1="-30.72" x2="35.84" y2="20.48" stroke="#b45309" stroke-width="4.096" stroke-linecap="round"/>
+      <line x1="-10.24" y1="-40.96" x2="0" y2="51.2" stroke="#b45309" stroke-width="4.096" stroke-linecap="round"/>
+      <!-- Leaves -->
+      <ellipse cx="-25.6" cy="-92.16" rx="25.6" ry="51.2" fill="#16a34a" transform="rotate(-25 -25.6 -92.16)"/>
+      <ellipse cx="0" cy="-112.64" rx="25.6" ry="56.32" fill="#15803d"/>
+      <ellipse cx="30.72" cy="-92.16" rx="25.6" ry="51.2" fill="#16a34a" transform="rotate(25 30.72 -92.16)"/>
+    </g>
+  </svg>
