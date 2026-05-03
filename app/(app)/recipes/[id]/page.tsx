@@ -11,9 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { archiveRecipe, planRecipe } from "@/lib/actions/recipes";
+import { Markdown } from "@/components/markdown/markdown";
 import { ScaleIngredients } from "@/components/recipes/scale-ingredients";
+import { RecipeCostPanel } from "@/components/recipes/recipe-cost-panel";
+import { TagList } from "@/components/tags/tag-list";
 import { createClient } from "@/lib/supabase/server";
 import { getHouseholdSettings, requireHousehold } from "@/lib/queries/household";
+import { lookupNutrition } from "@/lib/nutrition";
 
 function tomorrow() {
   const d = new Date();
@@ -61,6 +65,23 @@ export default async function RecipeDetailPage({
   const ingredients = [...(recipe.recipe_ingredients ?? [])].sort((a, b) => a.position - b.position);
   const settings = await getHouseholdSettings(supabase, householdId);
 
+  const { data: tags } = await supabase
+    .from("tags")
+    .select("id, label")
+    .eq("household_id", householdId)
+    .eq("entity_type", "recipe")
+    .eq("entity_id", recipe.id);
+
+  const nutritionFacts = ingredients
+    .map((i) => ({ ingredient: i.ingredient, n: lookupNutrition(i.ingredient) }))
+    .filter((x): x is { ingredient: string; n: NonNullable<ReturnType<typeof lookupNutrition>> } => !!x.n);
+
+  const { data: costs } = await supabase
+    .from("recipe_costs")
+    .select("id, ingredient, cost_cents")
+    .eq("recipe_id", recipe.id)
+    .order("created_at", { ascending: true });
+
   return (
     <>
       <AppHeader
@@ -90,6 +111,9 @@ export default async function RecipeDetailPage({
           {recipe.description && (
             <p className="mt-1 text-sm text-muted-foreground">{recipe.description}</p>
           )}
+          <div className="mt-2">
+            <TagList entityType="recipe" entityId={recipe.id} tags={tags ?? []} />
+          </div>
         </div>
 
         {recipe.photo_path && (
@@ -123,7 +147,45 @@ export default async function RecipeDetailPage({
               <CardTitle className="text-base">Steps</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-line text-sm">{recipe.steps}</p>
+              <Markdown source={recipe.steps} className="text-sm" />
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Cost per batch</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RecipeCostPanel
+              recipeId={recipe.id}
+              costs={costs ?? []}
+              yieldQuantity={recipe.yield_quantity}
+              yieldUnit={recipe.yield_unit}
+            />
+          </CardContent>
+        </Card>
+
+        {nutritionFacts.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Estimated nutrition (per 100g raw)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1 text-xs">
+                {nutritionFacts.map((f) => (
+                  <li key={f.ingredient} className="flex justify-between gap-2 border-b pb-1 last:border-0">
+                    <span>{f.ingredient}</span>
+                    <span className="text-muted-foreground">
+                      {f.n.kcal} kcal · {f.n.protein_g}g protein · {f.n.iron_mg}mg iron
+                      {f.n.vit_c_mg != null && <> · vit C {f.n.vit_c_mg}mg</>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                Approximate values — not medical advice.
+              </p>
             </CardContent>
           </Card>
         )}

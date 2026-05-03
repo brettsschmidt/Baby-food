@@ -136,6 +136,7 @@ export interface Database {
         notes: string | null;
         low_stock_threshold: number | null;
         photo_path: string | null;
+        sub_location: string | null;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -160,6 +161,8 @@ export interface Database {
         completed_at: Timestamp | null;
         created_by: UUID | null;
         recipe_id: UUID | null;
+        recurrence: "weekly" | "biweekly" | null;
+        recurrence_until: string | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -399,6 +402,81 @@ export interface Database {
         user_agent: string | null;
         created_at: Timestamp;
       }>;
+      tags: Table<{
+        id: UUID;
+        household_id: UUID;
+        entity_type: "food" | "recipe" | "memory" | "feeding" | "inventory_item";
+        entity_id: UUID;
+        label: string;
+        created_at: Timestamp;
+      }>;
+      feeding_comments: Table<{
+        id: UUID;
+        feeding_id: UUID;
+        author_id: UUID | null;
+        body: string;
+        created_at: Timestamp;
+      }>;
+      voice_notes: Table<{
+        id: UUID;
+        household_id: UUID;
+        feeding_id: UUID | null;
+        memory_id: UUID | null;
+        storage_path: string;
+        duration_seconds: number | null;
+        mime_type: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      feeding_edits: Table<{
+        id: UUID;
+        feeding_id: UUID;
+        household_id: UUID;
+        editor_id: UUID | null;
+        field: string;
+        old_value: string | null;
+        new_value: string | null;
+        created_at: Timestamp;
+      }>;
+      sticky_notes: Table<{
+        id: UUID;
+        household_id: UUID;
+        body: string;
+        color: string | null;
+        pinned: boolean;
+        created_by: UUID | null;
+        created_at: Timestamp;
+        updated_at: Timestamp;
+      }>;
+      meal_plans: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        planned_for: string;
+        meal_slot:
+          | "breakfast"
+          | "morning_snack"
+          | "lunch"
+          | "afternoon_snack"
+          | "dinner"
+          | "bedtime_bottle"
+          | "other";
+        inventory_item_id: UUID | null;
+        recipe_id: UUID | null;
+        custom_label: string | null;
+        done: boolean;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      recipe_costs: Table<{
+        id: UUID;
+        recipe_id: UUID;
+        ingredient: string;
+        cost_cents: number;
+        notes: string | null;
+        created_at: Timestamp;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -443,6 +521,16 @@ export interface Database {
           scope: "feed" | "growth" | "memories" | "all";
           expires_at: Timestamp;
           revoked: boolean;
+        }[];
+      };
+      search_household: {
+        Args: { p_household_id: UUID; p_query: string };
+        Returns: {
+          kind: string;
+          id: UUID;
+          label: string;
+          sublabel: string;
+          score: number;
         }[];
       };
     };

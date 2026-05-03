@@ -20,6 +20,12 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
+self.addEventListener("message", (event) => {
+  if ((event.data as { type?: string } | null)?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
 // Web Push handlers
 self.addEventListener("push", (event) => {
   if (!event.data) return;

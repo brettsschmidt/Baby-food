@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { Search, Settings } from "lucide-react";
 
 import { BabySwitcher } from "@/components/babies/baby-switcher";
 import { HouseholdSwitcher } from "@/components/household/household-switcher";
@@ -51,6 +51,11 @@ export async function AppHeader({
             <BabySwitcher babies={babies} activeId={active.id} />
           )}
           {action}
+          <Button asChild size="icon" variant="ghost">
+            <Link href="/search" aria-label="Search">
+              <Search className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </Button>
           <Button asChild size="icon" variant="ghost">
             <Link href="/settings" aria-label="Settings">
               <Settings className="h-4 w-4" aria-hidden="true" />

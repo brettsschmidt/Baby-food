@@ -151,6 +151,26 @@ export default async function SettingsPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/meals">
+                <FileText className="h-4 w-4" /> Today&apos;s meals
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/feedings/calendar">
+                <FileText className="h-4 w-4" /> Feeding calendar
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/timer">
+                <FileText className="h-4 w-4" /> Kitchen timer
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/inventory/import">
+                <FileText className="h-4 w-4" /> Bulk import inventory
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
               <a href="/api/data/export" download>
                 <FileText className="h-4 w-4" /> Export all data (ZIP)
               </a>

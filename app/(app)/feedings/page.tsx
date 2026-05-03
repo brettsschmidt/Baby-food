@@ -72,12 +72,19 @@ export default async function FeedingsPage({
       <AppHeader
         title="Feedings"
         action={
-          <Button asChild size="sm">
-            <Link href="/feedings/new">
-              <Plus className="h-4 w-4" />
-              Log
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/feedings/calendar" aria-label="Calendar view">
+                Cal
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/feedings/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Log
+              </Link>
+            </Button>
+          </>
         }
       />
       <div className="flex-1 space-y-4 px-4 py-4 pb-8">

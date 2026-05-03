@@ -21,7 +21,9 @@ export default async function InventoryPage() {
 
   const { data: items } = await supabase
     .from("inventory_items")
-    .select("id, name, storage, unit, quantity, initial_quantity, expiry_date, low_stock_threshold")
+    .select(
+      "id, name, storage, unit, quantity, initial_quantity, expiry_date, low_stock_threshold, sub_location",
+    )
     .eq("household_id", householdId)
     .is("archived_at", null)
     .order("expiry_date", { ascending: true, nullsFirst: false });
@@ -64,15 +66,18 @@ export default async function InventoryPage() {
           </div>
         )}
 
-        {(items ?? []).length > 0 && (
-          <div className="flex justify-end">
+        <div className="flex justify-end gap-1">
+          <Button asChild size="sm" variant="ghost">
+            <Link href="/inventory/import">Import CSV</Link>
+          </Button>
+          {(items ?? []).length > 0 && (
             <Button asChild size="sm" variant="ghost">
               <Link href="/inventory/audit">
                 <ListChecks className="h-4 w-4" /> Bulk audit
               </Link>
             </Button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="space-y-2">
           {items && items.length > 0 ? (
@@ -94,6 +99,7 @@ export default async function InventoryPage() {
                     <p className="truncate font-medium">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {item.quantity} of {item.initial_quantity} {item.unit}
+                      {item.sub_location && <> · {item.sub_location}</>}
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1">

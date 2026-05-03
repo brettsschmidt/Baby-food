@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { deleteFeeding, updateFeeding } from "@/lib/actions/feedings";
+import { Comments } from "@/components/feedings/comments";
+import { VoiceRecorder } from "@/components/voice/voice-recorder";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
 
@@ -58,6 +60,43 @@ export default async function FeedingDetailPage({
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 16);
   })();
+
+  type CommentRow = {
+    id: string;
+    body: string;
+    created_at: string;
+    profiles: { display_name: string | null } | null;
+  };
+
+  const { data: commentRows } = await supabase
+    .from("feeding_comments")
+    .select("id, body, created_at, profiles:author_id(display_name)")
+    .eq("feeding_id", feeding.id)
+    .order("created_at", { ascending: true })
+    .returns<CommentRow[]>();
+
+  const comments = (commentRows ?? []).map((c) => ({
+    id: c.id,
+    body: c.body,
+    created_at: c.created_at,
+    author: c.profiles,
+  }));
+
+  const { data: edits } = await supabase
+    .from("feeding_edits")
+    .select("field, old_value, new_value, created_at, profiles:editor_id(display_name)")
+    .eq("feeding_id", feeding.id)
+    .order("created_at", { ascending: false })
+    .limit(20)
+    .returns<
+      {
+        field: string;
+        old_value: string | null;
+        new_value: string | null;
+        created_at: string;
+        profiles: { display_name: string | null } | null;
+      }[]
+    >();
 
   return (
     <>
@@ -157,6 +196,39 @@ export default async function FeedingDetailPage({
             </form>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-base">Comments</CardTitle>
+            <VoiceRecorder feedingId={feeding.id} />
+          </CardHeader>
+          <CardContent>
+            <Comments feedingId={feeding.id} comments={comments} />
+          </CardContent>
+        </Card>
+
+        {edits && edits.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Edit history</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {edits.map((e, i) => (
+                  <li key={i}>
+                    <strong className="text-foreground">
+                      {e.profiles?.display_name ?? "Member"}
+                    </strong>{" "}
+                    changed <code>{e.field}</code>{" "}
+                    {e.old_value && <>from &ldquo;{e.old_value}&rdquo; </>}
+                    to &ldquo;{e.new_value ?? ""}&rdquo;{" "}
+                    <span>· {format(new Date(e.created_at), "MMM d, h:mm a")}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         <form action={deleteFeeding}>
           <input type="hidden" name="id" value={feeding.id} />

@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { QuickLog } from "@/components/dashboard/quick-log";
+import { StickyNotes } from "@/components/dashboard/sticky-notes";
+import { FirstRunTour } from "@/components/onboarding/first-run-tour";
+import { InstallBanner } from "@/components/pwa/install-banner";
+import { SwUpdatePrompt } from "@/components/pwa/sw-update-prompt";
 import { VoiceButton } from "@/components/voice/voice-button";
 import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -99,12 +103,22 @@ export default async function DashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
+  const { data: stickyNotes } = await supabase
+    .from("sticky_notes")
+    .select("id, body, color, pinned")
+    .eq("household_id", householdId)
+    .order("pinned", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(8);
+
   return (
     <>
       <RealtimeRefresher
-        tables={["feedings", "inventory_items"]}
+        tables={["feedings", "inventory_items", "sticky_notes"]}
         householdId={householdId}
       />
+      <FirstRunTour />
+      <SwUpdatePrompt />
       <AppHeader
         title="Baby Food"
         action={
@@ -129,7 +143,9 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        <InstallBanner />
         <QuickLog favourites={favourites} hasLastFeeding={!!lastFeeding} />
+        <StickyNotes notes={stickyNotes ?? []} />
 
         {(streak.current > 0 || latestMilestone) && (
           <div className="flex flex-wrap gap-2">

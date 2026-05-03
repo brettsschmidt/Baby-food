@@ -81,6 +81,25 @@ export default async function NewPrepPlanPage({
             required
           />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="recurrence">Repeat</Label>
+            <select
+              id="recurrence"
+              name="recurrence"
+              defaultValue=""
+              className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+            >
+              <option value="">One-off</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Every 2 weeks</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="recurrence_until">Until</Label>
+            <Input id="recurrence_until" name="recurrence_until" type="date" />
+          </div>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea id="notes" name="notes" placeholder="Recipe link, ingredients to buy…" />
