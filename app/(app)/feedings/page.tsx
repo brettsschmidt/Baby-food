@@ -5,6 +5,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
@@ -60,6 +61,7 @@ export default async function FeedingsPage() {
 
   return (
     <>
+      <RealtimeRefresher tables={["feedings", "feeding_items"]} householdId={householdId} />
       <AppHeader
         title="Feedings"
         action={

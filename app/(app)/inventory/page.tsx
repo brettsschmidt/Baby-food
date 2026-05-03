@@ -4,6 +4,7 @@ import { Plus, Snowflake, Refrigerator, Package } from "lucide-react";
 import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { expiryStatus } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
@@ -27,6 +28,10 @@ export default async function InventoryPage() {
 
   return (
     <>
+      <RealtimeRefresher
+        tables={["inventory_items", "inventory_movements"]}
+        householdId={householdId}
+      />
       <AppHeader
         title="Inventory"
         action={

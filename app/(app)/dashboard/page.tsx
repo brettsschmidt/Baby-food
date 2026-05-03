@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
@@ -57,6 +58,10 @@ export default async function DashboardPage() {
 
   return (
     <>
+      <RealtimeRefresher
+        tables={["feedings", "inventory_items"]}
+        householdId={householdId}
+      />
       <AppHeader
         title="Baby Food"
         action={
