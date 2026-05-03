@@ -8,10 +8,23 @@ import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
 import { getInsights } from "@/lib/queries/insights";
 
-export default async function InsightsPage() {
+const RANGES = [
+  { value: 7, label: "7d" },
+  { value: 14, label: "14d" },
+  { value: 30, label: "30d" },
+  { value: 90, label: "90d" },
+];
+
+export default async function InsightsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range } = await searchParams;
+  const days = Math.min(Math.max(Number(range ?? 7), 1), 365);
   const supabase = await createClient();
   const { householdId } = await requireHousehold(supabase);
-  const insights = await getInsights(supabase, householdId);
+  const insights = await getInsights(supabase, householdId, days);
 
   const wowDelta = insights.feedingsThisWeek - insights.feedingsLastWeek;
 
@@ -19,6 +32,21 @@ export default async function InsightsPage() {
     <>
       <AppHeader title="Insights" />
       <div className="flex-1 space-y-4 px-4 py-4 pb-8">
+        <div className="flex gap-1 overflow-x-auto">
+          {RANGES.map((r) => (
+            <a
+              key={r.value}
+              href={`/insights?range=${r.value}`}
+              className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                days === r.value
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "bg-background"
+              }`}
+            >
+              {r.label}
+            </a>
+          ))}
+        </div>
         {insights.allergenWatch.length > 0 && (
           <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/30">
             <CardHeader>
@@ -44,10 +72,41 @@ export default async function InsightsPage() {
         )}
 
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="Feedings (7d)" value={insights.feedingsThisWeek} delta={wowDelta} />
+          <Stat label={`Feedings (${days}d)`} value={insights.feedingsThisWeek} delta={wowDelta} />
           <Stat label="Foods tried" value={insights.uniqueFoodsThisWeek} />
           <Stat label="From freezer" value={`${insights.inventorySharePct}%`} />
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Variety score</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <span className="text-3xl font-bold">{insights.varietyScore}</span>
+              <span className="text-xs text-muted-foreground">out of 100</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary"
+                style={{ width: `${insights.varietyScore}%` }}
+              />
+            </div>
+            {insights.categoryShares.length > 0 && (
+              <div className="space-y-1 pt-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  By category
+                </p>
+                {insights.categoryShares.slice(0, 6).map((c) => (
+                  <div key={c.category} className="flex items-center justify-between text-sm">
+                    <span className="capitalize">{c.category}</span>
+                    <span className="text-muted-foreground">{Math.round(c.share * 100)}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

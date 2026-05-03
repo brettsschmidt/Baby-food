@@ -15,16 +15,18 @@ export async function AppHeader({
 }) {
   const supabase = await createClient();
   const { householdId, userId } = await requireHousehold(supabase);
-  const [babies, active] = await Promise.all([
+  const [babies, active, { data: household }] = await Promise.all([
     getBabies(supabase, householdId),
     getActiveBaby(supabase, householdId, userId),
+    supabase.from("households").select("accent_emoji").eq("id", householdId).maybeSingle(),
   ]);
+  const emoji = household?.accent_emoji ?? "🥕";
 
   return (
     <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur safe-top">
       <div className="mx-auto flex h-14 max-w-md items-center justify-between gap-3 px-4">
         <Link href="/dashboard" className="flex items-center gap-2 text-base font-semibold">
-          <span className="text-lg">🥕</span>
+          <span className="text-lg">{emoji}</span>
           <span>{title}</span>
         </Link>
         <div className="flex items-center gap-1">

@@ -104,9 +104,53 @@ export async function adjustInventoryItem(formData: FormData): Promise<void> {
 
   if (error) throw new Error(error.message);
 
+  // Restock auto-prep: when an item drops to/under its low_stock_threshold and
+  // we know the recipe that produced it, queue a draft prep_plan (status='planned')
+  // for tomorrow. Idempotent: skip if a planned prep already exists for the same recipe.
+  const { data: item } = await supabase
+    .from("inventory_items")
+    .select("id, name, quantity, low_stock_threshold, batch_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (
+    item &&
+    item.low_stock_threshold != null &&
+    item.quantity <= item.low_stock_threshold &&
+    item.batch_id
+  ) {
+    const { data: lastPrep } = await supabase
+      .from("prep_plans")
+      .select("recipe_id")
+      .eq("id", item.batch_id)
+      .maybeSingle();
+    const recipeId = lastPrep?.recipe_id;
+    if (recipeId) {
+      const { data: existing } = await supabase
+        .from("prep_plans")
+        .select("id")
+        .eq("household_id", householdId)
+        .eq("recipe_id", recipeId)
+        .eq("status", "planned")
+        .maybeSingle();
+      if (!existing) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        await supabase.from("prep_plans").insert({
+          household_id: householdId,
+          recipe_id: recipeId,
+          scheduled_for: tomorrow.toISOString().slice(0, 10),
+          notes: `Auto-restock for ${item.name}`,
+          created_by: userId,
+        });
+      }
+    }
+  }
+
   revalidatePath("/inventory");
   revalidatePath(`/inventory/${id}`);
   revalidatePath("/dashboard");
+  revalidatePath("/planner");
 }
 
 export async function archiveInventoryItem(formData: FormData): Promise<void> {

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { archiveRecipe, planRecipe } from "@/lib/actions/recipes";
+import { ScaleIngredients } from "@/components/recipes/scale-ingredients";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
 
@@ -106,17 +107,11 @@ export default async function RecipeDetailPage({
             <CardTitle className="text-base">Ingredients</CardTitle>
           </CardHeader>
           <CardContent>
-            {ingredients.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No ingredients listed.</p>
-            ) : (
-              <ul className="list-inside list-disc space-y-1 text-sm">
-                {ingredients.map((i) => (
-                  <li key={i.id}>
-                    {i.quantity ? <strong>{i.quantity}</strong> : null} {i.ingredient}
-                  </li>
-                ))}
-              </ul>
-            )}
+            <ScaleIngredients
+              ingredients={ingredients}
+              yieldQuantity={recipe.yield_quantity}
+              yieldUnit={recipe.yield_unit}
+            />
           </CardContent>
         </Card>
 
@@ -136,7 +131,7 @@ export default async function RecipeDetailPage({
             <CardTitle className="text-base">Plan a prep from this</CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={planRecipe} className="space-y-3">
+            <form id="plan-recipe" action={planRecipe} className="space-y-3">
               <input type="hidden" name="recipe_id" value={recipe.id} />
               <div className="space-y-2">
                 <Label htmlFor="scheduled_for">When</Label>

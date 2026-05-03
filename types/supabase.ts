@@ -14,6 +14,8 @@ type Unit = "cube" | "jar" | "pouch" | "g" | "ml" | "serving";
 type Texture = "puree" | "mash" | "soft" | "finger";
 type PlanStatus = "planned" | "in_progress" | "done" | "skipped";
 type Reason = "prep" | "feeding" | "waste" | "correction" | "restock";
+type SleepKind = "night" | "nap";
+type DiaperKind = "wet" | "dirty" | "both" | "dry";
 type ActivityKind =
   | "feeding_logged"
   | "feeding_edited"
@@ -52,6 +54,10 @@ export interface Database {
         default_freezer_expiry_days: number;
         default_fridge_expiry_days: number;
         default_pantry_expiry_days: number;
+        theme_color: string | null;
+        accent_emoji: string | null;
+        activity_retention_days: number | null;
+        shared_foods_opt_in: boolean;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -68,6 +74,9 @@ export interface Database {
         notify_on_partner_log: boolean;
         notify_on_low_stock: boolean;
         notify_feed_reminder_hours: number | null;
+        notify_weekly_digest: boolean;
+        digest_send_dow: number | null;
+        digest_send_hour: number | null;
       }>;
       household_invites: Table<{
         id: UUID;
@@ -86,6 +95,8 @@ export interface Database {
         name: string;
         birth_date: string;
         notes: string | null;
+        known_allergens: string[];
+        photo_path: string | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -236,6 +247,60 @@ export interface Database {
         summary: string | null;
         created_at: Timestamp;
       }>;
+      growth_measurements: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        measured_on: string;
+        weight_kg: number | null;
+        length_cm: number | null;
+        head_cm: number | null;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      sleep_logs: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        started_at: Timestamp;
+        ended_at: Timestamp | null;
+        kind: SleepKind;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      diaper_logs: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID;
+        changed_at: Timestamp;
+        kind: DiaperKind;
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      milestones: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID | null;
+        kind: string;
+        achieved_at: Timestamp;
+        detail: string | null;
+        created_at: Timestamp;
+      }>;
+      shared_foods: Table<{
+        id: UUID;
+        name: string;
+        category: string | null;
+        min_age_months: number | null;
+        allergens: string[];
+        texture: Texture | null;
+        intro_count: number;
+        loved_share: number | null;
+        source_household_id: UUID | null;
+        contributed_at: Timestamp;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -249,6 +314,18 @@ export interface Database {
         };
         Returns: UUID;
       };
+      contribute_shared_food: {
+        Args: {
+          p_name: string;
+          p_category: string | null;
+          p_min_age_months: number | null;
+          p_allergens: string[];
+          p_texture: string | null;
+        };
+        Returns: UUID;
+      };
+      prune_activity_log: { Args: { p_household_id: UUID }; Returns: number };
+      delete_account: { Args: Record<string, never>; Returns: void };
     };
     Enums: Record<string, never>;
   };

@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FeedingItemsField } from "@/components/feedings/feeding-items-field";
+import { FeedingForm } from "@/components/feedings/feeding-form";
+import { OfflineBridge } from "@/components/offline/offline-bridge";
 import { PhotoField } from "@/components/photo/photo-field";
-import { logFeeding } from "@/lib/actions/feedings";
 import { createClient } from "@/lib/supabase/server";
-import { requireHousehold } from "@/lib/queries/household";
+import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
 
 function nowLocalISO() {
   const d = new Date();
@@ -20,16 +21,48 @@ function nowLocalISO() {
 
 export default async function NewFeedingPage() {
   const supabase = await createClient();
-  const { householdId } = await requireHousehold(supabase);
+  const { householdId, userId } = await requireHousehold(supabase);
+  const baby = await getActiveBaby(supabase, householdId, userId);
 
   const { data: items } = await supabase
     .from("inventory_items")
-    .select("id, name, unit, quantity")
+    .select("id, name, unit, quantity, expiry_date")
     .eq("household_id", householdId)
     .is("archived_at", null)
     .gt("quantity", 0)
     .order("expiry_date", { ascending: true, nullsFirst: false })
     .limit(50);
+
+  // Smart suggestions: demote items fed in the last 4 hours, leave the rest in expiry order.
+  const nowMs = new Date().getTime();
+  const since4h = new Date(nowMs - 4 * 3600 * 1000).toISOString();
+  const since7d = new Date(nowMs - 7 * 86400 * 1000).toISOString();
+  const { data: recent } = await supabase
+    .from("feeding_items")
+    .select("inventory_item_id, feedings!inner(fed_at, household_id, archived_at)")
+    .eq("feedings.household_id", householdId)
+    .is("feedings.archived_at", null)
+    .gte("feedings.fed_at", since7d)
+    .returns<{ inventory_item_id: string | null; feedings: { fed_at: string } | null }[]>();
+
+  const lastFedAt = new Map<string, string>();
+  for (const r of recent ?? []) {
+    if (!r.inventory_item_id || !r.feedings) continue;
+    const cur = lastFedAt.get(r.inventory_item_id);
+    if (!cur || r.feedings.fed_at > cur) lastFedAt.set(r.inventory_item_id, r.feedings.fed_at);
+  }
+  const sortedItems = (items ?? [])
+    .map((it) => ({ ...it, demote: (lastFedAt.get(it.id) ?? "") >= since4h }))
+    .sort((a, b) => Number(a.demote) - Number(b.demote));
+
+  const { data: babyRow } = baby
+    ? await supabase
+        .from("babies")
+        .select("known_allergens")
+        .eq("id", baby.id)
+        .maybeSingle()
+    : { data: null };
+  const allergens = babyRow?.known_allergens ?? [];
 
   return (
     <>
@@ -43,8 +76,20 @@ export default async function NewFeedingPage() {
           </Button>
         }
       />
-      <form action={logFeeding} className="flex-1 space-y-4 px-4 py-4 pb-8">
-        <FeedingItemsField inventory={items ?? []} />
+      <FeedingForm>
+        <OfflineBridge />
+        {allergens.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50/60 p-3 text-xs dark:bg-amber-950/30">
+            <p className="font-medium">
+              {baby?.name} has known allergens: {allergens.join(", ")}
+            </p>
+            <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" name="allergen_override" />
+              Override and log anyway
+            </label>
+          </div>
+        )}
+        <FeedingItemsField inventory={sortedItems} />
 
         <div className="space-y-2">
           <Label>Reaction</Label>
@@ -92,10 +137,7 @@ export default async function NewFeedingPage() {
           <Textarea id="notes" name="notes" placeholder="First time trying — no rash" />
         </div>
 
-        <Button type="submit" size="lg" className="w-full">
-          Save feeding
-        </Button>
-      </form>
+      </FeedingForm>
     </>
   );
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, Package, Plus, Utensils } from "lucide-react";
+import { CalendarDays, Flame, Package, Plus, Sparkles, Utensils } from "lucide-react";
 import { subDays } from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
@@ -11,6 +11,7 @@ import { QuickLog } from "@/components/dashboard/quick-log";
 import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
+import { getFeedingStreak } from "@/lib/queries/milestones";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -74,6 +75,15 @@ export default async function DashboardPage() {
         .returns<FavRow[]>(),
     ]);
 
+  const streak = await getFeedingStreak(supabase, householdId);
+  const { data: latestMilestones } = await supabase
+    .from("milestones")
+    .select("kind, detail, achieved_at")
+    .eq("household_id", householdId)
+    .order("achieved_at", { ascending: false })
+    .limit(1);
+  const latestMilestone = latestMilestones?.[0];
+
   // Tally top-3 most-fed foods this week (by inventory item name OR custom note).
   const counts = new Map<string, { name: string; inventoryItemId: string | null; count: number }>();
   for (const r of favRows ?? []) {
@@ -116,6 +126,23 @@ export default async function DashboardPage() {
         )}
 
         <QuickLog favourites={favourites} hasLastFeeding={!!lastFeeding} />
+
+        {(streak.current > 0 || latestMilestone) && (
+          <div className="flex flex-wrap gap-2">
+            {streak.current > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-100">
+                <Flame className="h-3 w-3" />
+                {streak.current}-day streak
+              </span>
+            )}
+            {latestMilestone && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary">
+                <Sparkles className="h-3 w-3" />
+                {latestMilestone.detail ?? latestMilestone.kind}
+              </span>
+            )}
+          </div>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">

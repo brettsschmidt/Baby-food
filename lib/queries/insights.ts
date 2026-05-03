@@ -31,15 +31,18 @@ export interface InsightSummary {
   consumptionPerDay: number; // average inventory units consumed per day this week
   daysOfStockLeft: number | null;
   totalUnitsLeft: number;
+  varietyScore: number;          // 0..100, Shannon-evenness × log(unique)
+  categoryShares: { category: string; share: number; count: number }[];
 }
 
 export async function getInsights(
   supabase: SupabaseServerClient,
   householdId: string,
+  rangeDays = 7,
 ): Promise<InsightSummary> {
   const now = new Date();
-  const weekAgo = subDays(now, 7).toISOString();
-  const twoWeeksAgo = subDays(now, 14).toISOString();
+  const weekAgo = subDays(now, rangeDays).toISOString();
+  const twoWeeksAgo = subDays(now, rangeDays * 2).toISOString();
   const watchWindowAgo = subDays(now, 3).toISOString();
 
   type WeekRow = {
@@ -50,7 +53,7 @@ export async function getInsights(
       notes: string | null;
       is_first_try: boolean;
       inventory_items: { name: string | null } | null;
-      foods: { name: string | null } | null;
+      foods: { name: string | null; category: string | null } | null;
     }[];
   };
 
@@ -59,7 +62,7 @@ export async function getInsights(
       supabase
         .from("feedings")
         .select(
-          "fed_at, mood, feeding_items(inventory_item_id, notes, is_first_try, inventory_items(name), foods(name))",
+          "fed_at, mood, feeding_items(inventory_item_id, notes, is_first_try, inventory_items(name), foods(name, category))",
         )
         .eq("household_id", householdId)
         .is("archived_at", null)
@@ -198,6 +201,31 @@ export async function getInsights(
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
+  // Variety score: Shannon evenness × log10(unique foods+1), normalized to 0..100.
+  // Encourages both breadth (many distinct foods) and balance (no one food dominates).
+  const totalLogged = Array.from(foodStats.values()).reduce((s, f) => s + f.total, 0);
+  let entropy = 0;
+  for (const f of foodStats.values()) {
+    const p = f.total / Math.max(totalLogged, 1);
+    if (p > 0) entropy -= p * Math.log2(p);
+  }
+  const evenness = foodStats.size > 1 ? entropy / Math.log2(foodStats.size) : 0;
+  const breadth = Math.log10(foodStats.size + 1) / Math.log10(11); // saturates around 10 unique foods
+  const varietyScore = Math.round(evenness * breadth * 100);
+
+  // Category shares (foods.category)
+  const categoryCounts = new Map<string, number>();
+  for (const f of thisWeek ?? []) {
+    for (const it of f.feeding_items) {
+      const cat = it.foods?.category ?? "uncategorized";
+      categoryCounts.set(cat, (categoryCounts.get(cat) ?? 0) + 1);
+    }
+  }
+  const catTotal = Array.from(categoryCounts.values()).reduce((a, b) => a + b, 0) || 1;
+  const categoryShares = Array.from(categoryCounts.entries())
+    .map(([category, count]) => ({ category, count, share: count / catTotal }))
+    .sort((a, b) => b.count - a.count);
+
   return {
     feedingsThisWeek,
     feedingsLastWeek,
@@ -211,5 +239,7 @@ export async function getInsights(
     consumptionPerDay,
     daysOfStockLeft,
     totalUnitsLeft,
+    varietyScore,
+    categoryShares,
   };
 }

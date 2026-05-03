@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold, getActiveBaby } from "@/lib/queries/household";
 import { notifyHousehold } from "@/lib/push";
+import { evaluateMilestones } from "@/lib/queries/milestones";
 
 const MOODS = ["loved", "liked", "neutral", "disliked", "refused"] as const;
 const METHODS = ["spoon", "self_feed", "bottle", "breast"] as const;
@@ -67,6 +68,42 @@ export async function logFeeding(formData: FormData): Promise<void> {
   const notes = String(formData.get("notes") ?? "").trim() || null;
   const photoPath = String(formData.get("photo_path") ?? "") || null;
   const items = parseItems(formData);
+  const overrideAllergens = formData.get("allergen_override") === "on";
+
+  // Allergen check: gather any allergens from referenced foods/inventory items
+  // and bail if they overlap with the baby's known_allergens unless explicitly overridden.
+  if (!overrideAllergens) {
+    const inventoryIds = items
+      .map((i) => i.inventoryItemId)
+      .filter((id): id is string => !!id);
+    const { data: babyRow } = await supabase
+      .from("babies")
+      .select("known_allergens")
+      .eq("id", baby.id)
+      .maybeSingle();
+    const known = new Set((babyRow?.known_allergens ?? []).map((a) => a.toLowerCase()));
+
+    if (inventoryIds.length > 0 && known.size > 0) {
+      const { data: invs } = await supabase
+        .from("inventory_items")
+        .select("id, foods(allergens)")
+        .in("id", inventoryIds)
+        .returns<{ id: string; foods: { allergens: string[] } | null }[]>();
+
+      const conflicting = new Set<string>();
+      for (const inv of invs ?? []) {
+        for (const a of inv.foods?.allergens ?? []) {
+          if (known.has(a.toLowerCase())) conflicting.add(a);
+        }
+      }
+      if (conflicting.size > 0) {
+        const list = Array.from(conflicting).join(", ");
+        throw new Error(
+          `Blocked: this feeding contains ${baby.name}'s known allergens (${list}). Confirm to override.`,
+        );
+      }
+    }
+  }
 
   const { data: feeding, error } = await supabase
     .from("feedings")
@@ -118,6 +155,24 @@ export async function logFeeding(formData: FormData): Promise<void> {
     });
   } catch {
     /* push not configured in this environment */
+  }
+
+  // Best-effort milestone evaluation.
+  try {
+    const fresh = await evaluateMilestones(supabase, householdId);
+    for (const m of fresh) {
+      try {
+        await notifyHousehold(householdId, null, {
+          title: "Milestone unlocked",
+          body: m.detail ?? m.kind,
+          url: "/dashboard",
+        });
+      } catch {
+        /* push not configured */
+      }
+    }
+  } catch {
+    /* milestone eval failure shouldn't block the feeding log */
   }
 
   revalidatePath("/feedings");
@@ -181,6 +236,16 @@ export async function deleteFeeding(formData: FormData): Promise<void> {
       reason: "correction",
       created_by: userId,
     });
+  }
+
+  // Photo lifecycle: purge the attached photo from Storage.
+  const { data: feedingRow } = await supabase
+    .from("feedings")
+    .select("photo_path")
+    .eq("id", id)
+    .maybeSingle();
+  if (feedingRow?.photo_path) {
+    await supabase.storage.from("household-photos").remove([feedingRow.photo_path]);
   }
 
   await supabase

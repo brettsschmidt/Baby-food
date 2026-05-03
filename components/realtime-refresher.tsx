@@ -12,7 +12,11 @@ type TableName =
   | "inventory_movements"
   | "shopping_list_items"
   | "activity_log"
-  | "recipes";
+  | "recipes"
+  | "growth_measurements"
+  | "sleep_logs"
+  | "diaper_logs"
+  | "milestones";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

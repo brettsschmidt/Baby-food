@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoField } from "@/components/photo/photo-field";
+import { UrlImporter } from "@/components/recipes/url-importer";
 import { createRecipe } from "@/lib/actions/recipes";
 
 export default function NewRecipePage() {
@@ -23,6 +24,7 @@ export default function NewRecipePage() {
         }
       />
       <form action={createRecipe} className="flex-1 space-y-4 px-4 py-4 pb-8">
+        <UrlImporter />
         <div className="space-y-2">
           <Label htmlFor="name">Name</Label>
           <Input id="name" name="name" required autoFocus />

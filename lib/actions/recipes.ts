@@ -102,6 +102,10 @@ export async function planRecipe(formData: FormData): Promise<void> {
   const recipeId = String(formData.get("recipe_id") ?? "");
   const scheduledFor = String(formData.get("scheduled_for") ?? "");
   const addToShopping = formData.get("add_to_shopping") === "on";
+  const scaleFactor = Math.max(
+    0.25,
+    Math.min(5, Number(formData.get("scale_factor") ?? 1) || 1),
+  );
   if (!recipeId || !scheduledFor) throw new Error("Missing fields");
 
   const { data: recipe } = await supabase
@@ -111,12 +115,13 @@ export async function planRecipe(formData: FormData): Promise<void> {
     .maybeSingle();
   if (!recipe) throw new Error("Recipe not found");
 
+  const noteSuffix = scaleFactor === 1 ? "" : ` (×${scaleFactor})`;
   const { data: plan, error } = await supabase
     .from("prep_plans")
     .insert({
       household_id: householdId,
       scheduled_for: scheduledFor,
-      notes: recipe.name,
+      notes: recipe.name + noteSuffix,
       recipe_id: recipeId,
       created_by: userId,
     })
@@ -127,7 +132,7 @@ export async function planRecipe(formData: FormData): Promise<void> {
   if (recipe.yield_quantity) {
     await supabase.from("prep_plan_items").insert({
       prep_plan_id: plan.id,
-      planned_quantity: recipe.yield_quantity,
+      planned_quantity: recipe.yield_quantity * scaleFactor,
       unit: recipe.yield_unit ?? "cube",
     });
   }
