@@ -14,6 +14,7 @@ import { format, isToday, isYesterday } from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
 import { Button } from "@/components/ui/button";
+import { ReactionRow } from "@/components/activity/reaction-row";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import { relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
@@ -104,6 +105,26 @@ export default async function ActivityPage() {
     .limit(100)
     .returns<ActivityRow[]>();
 
+  const ids = (rows ?? []).map((r) => r.id);
+  const { data: reactions } =
+    ids.length > 0
+      ? await supabase
+          .from("activity_reactions")
+          .select("activity_id, emoji, user_id")
+          .in("activity_id", ids)
+      : { data: [] };
+  const { data: { user } = { user: null } } = await supabase.auth.getUser();
+  const myUserId = user?.id ?? null;
+  const reactionMap = new Map<string, Map<string, { count: number; mine: boolean }>>();
+  for (const r of reactions ?? []) {
+    if (!reactionMap.has(r.activity_id)) reactionMap.set(r.activity_id, new Map());
+    const m = reactionMap.get(r.activity_id)!;
+    const cur = m.get(r.emoji) ?? { count: 0, mine: false };
+    cur.count += 1;
+    if (r.user_id === myUserId) cur.mine = true;
+    m.set(r.emoji, cur);
+  }
+
   const groups = new Map<string, ActivityRow[]>();
   rows?.forEach((r) => {
     const k = format(new Date(r.created_at), "yyyy-MM-dd");
@@ -155,6 +176,15 @@ export default async function ActivityPage() {
                         <p className="text-xs text-muted-foreground">
                           {relativeTime(r.created_at)}
                         </p>
+                        <ReactionRow
+                          activityId={r.id}
+                          reactions={Array.from(
+                            (reactionMap.get(r.id) ?? new Map<
+                              string,
+                              { count: number; mine: boolean }
+                            >()).entries(),
+                          ).map(([emoji, v]) => ({ emoji, ...v }))}
+                        />
                       </div>
                     </li>
                   );

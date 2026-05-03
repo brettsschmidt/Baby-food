@@ -14,7 +14,9 @@ import { archiveRecipe, planRecipe } from "@/lib/actions/recipes";
 import { Markdown } from "@/components/markdown/markdown";
 import { ScaleIngredients } from "@/components/recipes/scale-ingredients";
 import { RecipeCostPanel } from "@/components/recipes/recipe-cost-panel";
+import { StarRating } from "@/components/feedings/star-rating";
 import { TagList } from "@/components/tags/tag-list";
+import { addSubstitution, deleteSubstitution } from "@/lib/actions/recipe-extras";
 import { createClient } from "@/lib/supabase/server";
 import { getHouseholdSettings, requireHousehold } from "@/lib/queries/household";
 import { lookupNutrition } from "@/lib/nutrition";
@@ -82,6 +84,24 @@ export default async function RecipeDetailPage({
     .eq("recipe_id", recipe.id)
     .order("created_at", { ascending: true });
 
+  const { data: subs } = await supabase
+    .from("recipe_substitutions")
+    .select("id, ingredient, substitution")
+    .eq("recipe_id", recipe.id)
+    .order("created_at", { ascending: true });
+
+  const { data: { user } = { user: null } } = await supabase.auth.getUser();
+  const myUserId = user?.id ?? null;
+  const { data: ratings } = await supabase
+    .from("recipe_ratings")
+    .select("rater_id, stars")
+    .eq("recipe_id", recipe.id);
+  const myRating = (ratings ?? []).find((r) => r.rater_id === myUserId)?.stars ?? null;
+  const avg =
+    (ratings ?? []).length > 0
+      ? (ratings ?? []).reduce((s, r) => s + r.stars, 0) / (ratings ?? []).length
+      : null;
+
   return (
     <>
       <AppHeader
@@ -111,6 +131,15 @@ export default async function RecipeDetailPage({
           {recipe.description && (
             <p className="mt-1 text-sm text-muted-foreground">{recipe.description}</p>
           )}
+          <div className="mt-2 flex items-center gap-2">
+            <StarRating
+              entityId={recipe.id}
+              kind="recipe"
+              current={myRating}
+              averageStars={avg}
+              size="sm"
+            />
+          </div>
           <div className="mt-2">
             <TagList entityType="recipe" entityId={recipe.id} tags={tags ?? []} />
           </div>
@@ -151,6 +180,56 @@ export default async function RecipeDetailPage({
             </CardContent>
           </Card>
         )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Substitutions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(subs ?? []).length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                Note swaps you&apos;ve tried (e.g. butternut → sweet potato).
+              </p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {subs!.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-2 border-b pb-1 last:border-0">
+                    <span>
+                      <strong>{s.ingredient}</strong> → {s.substitution}
+                    </span>
+                    <form action={deleteSubstitution}>
+                      <input type="hidden" name="id" value={s.id} />
+                      <input type="hidden" name="recipe_id" value={recipe.id} />
+                      <button
+                        type="submit"
+                        className="text-xs text-muted-foreground hover:text-destructive"
+                        aria-label="Remove substitution"
+                      >
+                        ×
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <form action={addSubstitution} className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-1">
+              <input type="hidden" name="recipe_id" value={recipe.id} />
+              <Input name="ingredient" placeholder="Ingredient" />
+              <Input name="substitution" placeholder="Swap with…" />
+              <Button type="submit" size="sm">
+                Add
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="flex items-center justify-end">
+          <Button asChild variant="ghost" size="sm">
+            <a href={`/api/recipes/${recipe.id}/export`} download>
+              Export recipe as JSON
+            </a>
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>

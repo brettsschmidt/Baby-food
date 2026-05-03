@@ -25,12 +25,14 @@ function dayLabel(date: Date) {
   return format(date, "EEEE, MMM d");
 }
 
+const PAGE_SIZE = 50;
+
 export default async function FeedingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ logged?: string }>;
+  searchParams: Promise<{ logged?: string; before?: string }>;
 }) {
-  const { logged } = await searchParams;
+  const { logged, before } = await searchParams;
   const supabase = await createClient();
   const { householdId } = await requireHousehold(supabase);
 
@@ -48,7 +50,7 @@ export default async function FeedingsPage({
     }[];
   };
 
-  const { data: feedings } = await supabase
+  let listQuery = supabase
     .from("feedings")
     .select(
       "id, fed_at, mood, notes, feeding_items(quantity, notes, is_first_try, inventory_items(name), foods(name))",
@@ -56,8 +58,14 @@ export default async function FeedingsPage({
     .eq("household_id", householdId)
     .is("archived_at", null)
     .order("fed_at", { ascending: false })
-    .limit(100)
-    .returns<TimelineFeeding[]>();
+    .limit(PAGE_SIZE + 1);
+
+  if (before) listQuery = listQuery.lt("fed_at", before);
+
+  const { data: rawFeedings } = await listQuery.returns<TimelineFeeding[]>();
+  const hasMore = (rawFeedings ?? []).length > PAGE_SIZE;
+  const feedings = (rawFeedings ?? []).slice(0, PAGE_SIZE);
+  const nextBefore = hasMore ? feedings[feedings.length - 1].fed_at : null;
 
   const groups = new Map<string, TimelineFeeding[]>();
   feedings?.forEach((f) => {
@@ -146,6 +154,15 @@ export default async function FeedingsPage({
           ))
         ) : (
           <EmptyState />
+        )}
+        {nextBefore && (
+          <div className="flex justify-center pt-4">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/feedings?before=${encodeURIComponent(nextBefore)}`}>
+                Load older
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
     </>

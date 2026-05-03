@@ -11,12 +11,14 @@ export async function addShoppingItem(formData: FormData): Promise<void> {
 
   const text = String(formData.get("text") ?? "").trim();
   const quantity = String(formData.get("quantity") ?? "").trim() || null;
+  const aisle = String(formData.get("aisle") ?? "").trim() || null;
   if (!text) return;
 
   await supabase.from("shopping_list_items").insert({
     household_id: householdId,
     text,
     quantity,
+    aisle,
     created_by: userId,
   });
   revalidatePath("/shopping");

@@ -9,11 +9,14 @@ type TableName =
   | "feedings"
   | "feeding_items"
   | "feeding_comments"
+  | "feeding_ratings"
   | "inventory_items"
   | "inventory_movements"
   | "shopping_list_items"
   | "activity_log"
+  | "activity_reactions"
   | "recipes"
+  | "recipe_ratings"
   | "growth_measurements"
   | "sleep_logs"
   | "diaper_logs"
@@ -22,7 +25,8 @@ type TableName =
   | "memories"
   | "recipe_collections"
   | "sticky_notes"
-  | "meal_plans";
+  | "meal_plans"
+  | "caregiver_shifts";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

@@ -81,7 +81,7 @@ export default async function SettingsPage() {
     supabase
       .from("household_member_prefs")
       .select(
-        "notify_on_partner_log, notify_on_low_stock, notify_weekly_digest, digest_send_dow, digest_send_hour",
+        "notify_on_partner_log, notify_on_low_stock, notify_weekly_digest, digest_send_dow, digest_send_hour, quiet_hours_start, quiet_hours_end",
       )
       .eq("household_id", householdId)
       .eq("user_id", userId)
@@ -174,6 +174,26 @@ export default async function SettingsPage() {
               <a href="/api/data/export" download>
                 <FileText className="h-4 w-4" /> Export all data (ZIP)
               </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/insights/waste">
+                <FileText className="h-4 w-4" /> Waste analytics
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/print/monthly">
+                <FileText className="h-4 w-4" /> Monthly recap (print)
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/print/meal-plan">
+                <FileText className="h-4 w-4" /> Weekly meal plan (print)
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/feedings/import">
+                <FileText className="h-4 w-4" /> Import feedings (CSV)
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -498,6 +518,36 @@ export default async function SettingsPage() {
                     min="0"
                     max="23"
                     defaultValue={prefs?.digest_send_hour ?? 9}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 border-t pt-2">
+                <div className="space-y-1">
+                  <Label htmlFor="quiet_hours_start" className="text-xs">
+                    Quiet hours start (UTC)
+                  </Label>
+                  <Input
+                    id="quiet_hours_start"
+                    name="quiet_hours_start"
+                    type="number"
+                    min="0"
+                    max="23"
+                    defaultValue={prefs?.quiet_hours_start ?? ""}
+                    placeholder="22"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="quiet_hours_end" className="text-xs">
+                    Quiet hours end
+                  </Label>
+                  <Input
+                    id="quiet_hours_end"
+                    name="quiet_hours_end"
+                    type="number"
+                    min="0"
+                    max="23"
+                    defaultValue={prefs?.quiet_hours_end ?? ""}
+                    placeholder="7"
                   />
                 </div>
               </div>

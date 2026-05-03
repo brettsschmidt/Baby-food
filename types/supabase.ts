@@ -60,6 +60,9 @@ export interface Database {
         shared_foods_opt_in: boolean;
         theme_mode: "light" | "dark" | "system" | null;
         units_preference: "metric" | "imperial" | null;
+        storage_capacity_freezer: number | null;
+        storage_capacity_fridge: number | null;
+        storage_capacity_pantry: number | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -83,6 +86,8 @@ export interface Database {
         vitamin_reminder_hours: number | null;
         iron_reminder_hours: number | null;
         voice_log_enabled: boolean;
+        quiet_hours_start: number | null;
+        quiet_hours_end: number | null;
       }>;
       household_invites: Table<{
         id: UUID;
@@ -104,6 +109,7 @@ export interface Database {
         notes: string | null;
         known_allergens: string[];
         photo_path: string | null;
+        theme_color: string | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -137,6 +143,9 @@ export interface Database {
         low_stock_threshold: number | null;
         photo_path: string | null;
         sub_location: string | null;
+        cost_cents: number | null;
+        reserved_at: Timestamp | null;
+        reserved_for: string | null;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -232,6 +241,7 @@ export interface Database {
         household_id: UUID;
         text: string;
         quantity: string | null;
+        aisle: string | null;
         completed_at: Timestamp | null;
         source_recipe_id: UUID | null;
         source_prep_plan_id: UUID | null;
@@ -477,6 +487,77 @@ export interface Database {
         notes: string | null;
         created_at: Timestamp;
       }>;
+      feeding_ratings: Table<{
+        feeding_id: UUID;
+        rater_id: UUID;
+        stars: number;
+        created_at: Timestamp;
+      }>;
+      recipe_ratings: Table<{
+        recipe_id: UUID;
+        rater_id: UUID;
+        stars: number;
+        notes: string | null;
+        created_at: Timestamp;
+      }>;
+      recipe_substitutions: Table<{
+        id: UUID;
+        recipe_id: UUID;
+        ingredient: string;
+        substitution: string;
+        created_at: Timestamp;
+      }>;
+      recipe_steps: Table<{
+        id: UUID;
+        recipe_id: UUID;
+        position: number;
+        body: string;
+        photo_path: string | null;
+        created_at: Timestamp;
+      }>;
+      caregiver_shifts: Table<{
+        id: UUID;
+        household_id: UUID;
+        user_id: UUID;
+        starts_at: Timestamp;
+        ends_at: Timestamp | null;
+        notes: string | null;
+        created_at: Timestamp;
+      }>;
+      activity_reactions: Table<{
+        id: UUID;
+        activity_id: UUID;
+        user_id: UUID;
+        emoji: string;
+        created_at: Timestamp;
+      }>;
+      goals: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID | null;
+        metric: "unique_foods" | "feedings" | "variety_score" | "self_feed_meals";
+        target: number;
+        period: "week" | "month";
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      saved_filters: Table<{
+        id: UUID;
+        user_id: UUID;
+        household_id: UUID;
+        page: "inventory" | "feedings" | "search";
+        name: string;
+        query: string;
+        created_at: Timestamp;
+      }>;
+      inventory_snapshots: Table<{
+        id: UUID;
+        household_id: UUID;
+        taken_on: string;
+        total_items: number;
+        total_units: number;
+        total_value_cents: number | null;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -533,6 +614,7 @@ export interface Database {
           score: number;
         }[];
       };
+      snapshot_inventory: { Args: { p_household_id: UUID }; Returns: void };
     };
     Enums: Record<string, never>;
   };

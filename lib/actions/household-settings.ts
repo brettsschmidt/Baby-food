@@ -118,6 +118,10 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
   const digest = formData.get("notify_weekly_digest") === "on";
   const dow = Number(formData.get("digest_send_dow") ?? 0);
   const hour = Number(formData.get("digest_send_hour") ?? 9);
+  const qhStartRaw = String(formData.get("quiet_hours_start") ?? "");
+  const qhEndRaw = String(formData.get("quiet_hours_end") ?? "");
+  const qhStart = qhStartRaw ? Number(qhStartRaw) : null;
+  const qhEnd = qhEndRaw ? Number(qhEndRaw) : null;
 
   await supabase
     .from("household_member_prefs")
@@ -130,6 +134,8 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
         notify_weekly_digest: digest,
         digest_send_dow: dow,
         digest_send_hour: hour,
+        quiet_hours_start: qhStart,
+        quiet_hours_end: qhEnd,
       },
       { onConflict: "household_id,user_id" },
     );
