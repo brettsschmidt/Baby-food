@@ -16,12 +16,7 @@ export async function createHousehold(formData: FormData): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { error } = await supabase
-    .from("households")
-    .insert({ name, created_by: user.id })
-    .select("id")
-    .single();
-
+  const { error } = await supabase.rpc("create_household", { p_name: name });
   if (error) throw new Error(error.message);
 
   revalidatePath("/", "layout");

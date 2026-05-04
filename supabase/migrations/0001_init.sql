@@ -166,10 +166,10 @@ create table public.foods (
   notes text,
   archived_at timestamptz,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (household_id, lower(name))
+  updated_at timestamptz not null default now()
 );
 
+create unique index foods_household_name_unique_idx on public.foods(household_id, lower(name));
 create index foods_household_idx on public.foods(household_id) where archived_at is null;
 
 create trigger foods_set_updated_at before update on public.foods

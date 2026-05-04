@@ -117,10 +117,10 @@ create table if not exists public.shared_foods (
   intro_count int not null default 0,
   loved_share numeric,                                  -- 0..1
   source_household_id uuid references public.households(id) on delete set null,
-  contributed_at timestamptz not null default now(),
-  unique (lower(name), min_age_months)
+  contributed_at timestamptz not null default now()
 );
 
+create unique index if not exists shared_foods_name_age_unique_idx on public.shared_foods(lower(name), min_age_months);
 create index if not exists shared_foods_age_idx on public.shared_foods(min_age_months);
 
 -- shared_foods is world-readable to authenticated users (no household scope).
