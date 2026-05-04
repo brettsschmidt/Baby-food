@@ -22,6 +22,8 @@ export async function updateHouseholdTheme(formData: FormData): Promise<void> {
     name?: string;
     theme_mode?: "light" | "dark" | "system";
     units_preference?: "metric" | "imperial";
+    timezone?: string;
+    list_density?: "comfortable" | "compact";
   } = {};
   if (themeColor) update.theme_color = themeColor;
   if (accentEmoji) update.accent_emoji = accentEmoji;
@@ -31,6 +33,12 @@ export async function updateHouseholdTheme(formData: FormData): Promise<void> {
   }
   if (unitsRaw === "metric" || unitsRaw === "imperial") {
     update.units_preference = unitsRaw;
+  }
+  const tz = String(formData.get("timezone") ?? "").trim();
+  if (tz) update.timezone = tz;
+  const densityRaw = String(formData.get("list_density") ?? "");
+  if (densityRaw === "comfortable" || densityRaw === "compact") {
+    update.list_density = densityRaw;
   }
   if (Object.keys(update).length === 0) return;
 

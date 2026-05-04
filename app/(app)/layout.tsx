@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/nav/bottom-nav";
 import { CommandPalette } from "@/components/keyboard/command-palette";
 import { KeyboardShortcuts } from "@/components/keyboard/shortcuts";
+import { ShortcutsCheatsheet } from "@/components/keyboard/shortcuts-cheatsheet";
 import { PullToRefresh } from "@/components/dashboard/pull-to-refresh";
 import { ThemeApplier } from "@/components/theme-applier";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <ThemeApplier mode={themeMode} />
       <KeyboardShortcuts />
       <CommandPalette />
+      <ShortcutsCheatsheet />
       <PullToRefresh />
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">{children}</div>
       <BottomNav />

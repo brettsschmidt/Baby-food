@@ -43,3 +43,18 @@ export async function togglePinStickyNote(formData: FormData): Promise<void> {
   await supabase.from("sticky_notes").update({ pinned: !pinned }).eq("id", id);
   revalidatePath("/dashboard");
 }
+
+export async function snoozeStickyNote(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const hours = Number(formData.get("hours") ?? 24);
+  if (!id || !Number.isFinite(hours) || hours <= 0) return;
+  const supabase = await createClient();
+  await requireHousehold(supabase);
+  const until = new Date();
+  until.setHours(until.getHours() + hours);
+  await supabase
+    .from("sticky_notes")
+    .update({ snoozed_until: until.toISOString() })
+    .eq("id", id);
+  revalidatePath("/dashboard");
+}

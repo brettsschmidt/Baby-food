@@ -26,7 +26,9 @@ type TableName =
   | "recipe_collections"
   | "sticky_notes"
   | "meal_plans"
-  | "caregiver_shifts";
+  | "caregiver_shifts"
+  | "trend_annotations"
+  | "day_notes";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

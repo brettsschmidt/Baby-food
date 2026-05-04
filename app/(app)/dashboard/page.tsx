@@ -24,6 +24,7 @@ import {
   getStreakDelta,
   getWeeklyWinner,
 } from "@/lib/queries/dashboard-extras";
+import { endCaregiverShift, startCaregiverShift } from "@/lib/actions/caregiver";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -110,10 +111,12 @@ export default async function DashboardPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 3);
 
+  const nowIso = new Date().toISOString();
   const { data: stickyNotes } = await supabase
     .from("sticky_notes")
-    .select("id, body, color, pinned")
+    .select("id, body, color, pinned, snoozed_until")
     .eq("household_id", householdId)
+    .or(`snoozed_until.is.null,snoozed_until.lt.${nowIso}`)
     .order("pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(8);
@@ -152,6 +155,16 @@ export default async function DashboardPage() {
       }[]
     >();
   const onDuty = openShifts?.[0];
+  const myUserId = userId;
+  const iAmOnDuty = onDuty?.user_id === myUserId;
+
+  const todayDate = new Date().toISOString().slice(0, 10);
+  const { data: dayNote } = await supabase
+    .from("day_notes")
+    .select("body")
+    .eq("household_id", householdId)
+    .eq("on_date", todayDate)
+    .maybeSingle();
 
   return (
     <>
@@ -190,9 +203,34 @@ export default async function DashboardPage() {
         <StickyNotes notes={stickyNotes ?? []} />
 
         {onDuty && (
-          <div className="rounded-md bg-emerald-100 p-2 text-xs text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-            <strong>{onDuty.profiles?.display_name ?? "Member"}</strong> is on duty since{" "}
-            {relativeTime(onDuty.starts_at)}.
+          <div className="flex items-center justify-between rounded-md bg-emerald-100 p-2 text-xs text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+            <span>
+              <strong>{onDuty.profiles?.display_name ?? "Member"}</strong> on duty since{" "}
+              {relativeTime(onDuty.starts_at)}.
+            </span>
+            {iAmOnDuty && (
+              <form action={endCaregiverShift}>
+                <button type="submit" className="underline">
+                  End shift
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+        {!onDuty && (
+          <form action={startCaregiverShift}>
+            <Button type="submit" size="sm" variant="outline">
+              Start my shift
+            </Button>
+          </form>
+        )}
+
+        {dayNote && (
+          <div className="rounded-md border bg-card/60 p-3 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Today&apos;s note
+            </p>
+            <p className="mt-1 whitespace-pre-wrap">{dayNote.body}</p>
           </div>
         )}
 

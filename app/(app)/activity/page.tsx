@@ -85,7 +85,12 @@ function dayLabel(d: Date) {
   return format(d, "EEEE, MMM d");
 }
 
-export default async function ActivityPage() {
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kind?: string; q?: string }>;
+}) {
+  const { kind, q } = await searchParams;
   const supabase = await createClient();
   const { householdId } = await requireHousehold(supabase);
 
@@ -97,13 +102,30 @@ export default async function ActivityPage() {
     profiles: { display_name: string | null } | null;
   };
 
-  const { data: rows } = await supabase
+  let rowsQuery = supabase
     .from("activity_log")
     .select("id, kind, summary, created_at, profiles:actor_id(display_name)")
     .eq("household_id", householdId)
     .order("created_at", { ascending: false })
-    .limit(100)
-    .returns<ActivityRow[]>();
+    .limit(100);
+
+  type ActivityKind =
+    | "feeding_logged"
+    | "feeding_edited"
+    | "feeding_deleted"
+    | "inventory_added"
+    | "inventory_adjusted"
+    | "inventory_archived"
+    | "prep_planned"
+    | "prep_completed"
+    | "recipe_added"
+    | "recipe_edited"
+    | "baby_added"
+    | "member_joined";
+  if (kind) rowsQuery = rowsQuery.eq("kind", kind as ActivityKind);
+  if (q) rowsQuery = rowsQuery.ilike("summary", `%${q}%`);
+
+  const { data: rows } = await rowsQuery.returns<ActivityRow[]>();
 
   const ids = (rows ?? []).map((r) => r.id);
   const { data: reactions } =
@@ -146,6 +168,34 @@ export default async function ActivityPage() {
         }
       />
       <div className="flex-1 space-y-6 px-4 py-4 pb-8">
+        <form className="flex flex-wrap gap-2" method="GET">
+          <input
+            type="text"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search summary…"
+            className="h-8 flex-1 rounded-md border bg-background px-2 text-sm"
+          />
+          <select
+            name="kind"
+            defaultValue={kind ?? ""}
+            className="h-8 rounded-md border bg-background px-2 text-sm"
+          >
+            <option value="">All kinds</option>
+            <option value="feeding_logged">Feeding logged</option>
+            <option value="feeding_edited">Feeding edited</option>
+            <option value="feeding_deleted">Feeding deleted</option>
+            <option value="inventory_added">Inventory added</option>
+            <option value="inventory_adjusted">Inventory adjusted</option>
+            <option value="prep_planned">Prep planned</option>
+            <option value="prep_completed">Prep completed</option>
+            <option value="recipe_added">Recipe added</option>
+            <option value="member_joined">Member joined</option>
+          </select>
+          <Button type="submit" size="sm" variant="outline">
+            Filter
+          </Button>
+        </form>
         {!rows || rows.length === 0 ? (
           <p className="rounded-lg border-2 border-dashed border-border p-10 text-center text-sm text-muted-foreground">
             No activity yet. Once you start logging, both parents will see what changed here.

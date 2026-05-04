@@ -63,6 +63,8 @@ export interface Database {
         storage_capacity_freezer: number | null;
         storage_capacity_fridge: number | null;
         storage_capacity_pantry: number | null;
+        timezone: string | null;
+        list_density: "comfortable" | "compact" | null;
         created_at: Timestamp;
         updated_at: Timestamp;
       }>;
@@ -123,6 +125,7 @@ export interface Database {
         texture: Texture | null;
         notes: string | null;
         photo_path: string | null;
+        starred: boolean;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -146,6 +149,7 @@ export interface Database {
         cost_cents: number | null;
         reserved_at: Timestamp | null;
         reserved_for: string | null;
+        starred: boolean;
         archived_at: Timestamp | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -224,6 +228,8 @@ export interface Database {
         steps: string | null;
         source_url: string | null;
         photo_path: string | null;
+        equipment: string | null;
+        parent_recipe_id: UUID | null;
         archived_at: Timestamp | null;
         created_by: UUID | null;
         created_at: Timestamp;
@@ -425,6 +431,7 @@ export interface Database {
         feeding_id: UUID;
         author_id: UUID | null;
         body: string;
+        read_by: UUID[];
         created_at: Timestamp;
       }>;
       voice_notes: Table<{
@@ -454,6 +461,7 @@ export interface Database {
         body: string;
         color: string | null;
         pinned: boolean;
+        snoozed_until: Timestamp | null;
         created_by: UUID | null;
         created_at: Timestamp;
         updated_at: Timestamp;
@@ -558,6 +566,48 @@ export interface Database {
         total_units: number;
         total_value_cents: number | null;
       }>;
+      trend_annotations: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID | null;
+        occurred_on: string;
+        label: string;
+        kind: "vacation" | "sick" | "growth_spurt" | "teething" | "other";
+        notes: string | null;
+        created_by: UUID | null;
+        created_at: Timestamp;
+      }>;
+      recently_viewed: Table<{
+        id: UUID;
+        user_id: UUID;
+        household_id: UUID;
+        entity_type: "inventory_item" | "recipe" | "memory" | "feeding";
+        entity_id: UUID;
+        viewed_at: Timestamp;
+      }>;
+      timing_logs: Table<{
+        id: number;
+        user_id: UUID | null;
+        household_id: UUID | null;
+        route: string;
+        duration_ms: number;
+        created_at: Timestamp;
+      }>;
+      day_notes: Table<{
+        id: UUID;
+        household_id: UUID;
+        baby_id: UUID | null;
+        on_date: string;
+        body: string;
+        created_by: UUID | null;
+        created_at: Timestamp;
+        updated_at: Timestamp;
+      }>;
+      dashboard_layout: Table<{
+        user_id: UUID;
+        widgets: string[];
+        updated_at: Timestamp;
+      }>;
     };
     Views: Record<string, never>;
     Functions: {
@@ -615,6 +665,16 @@ export interface Database {
         }[];
       };
       snapshot_inventory: { Args: { p_household_id: UUID }; Returns: void };
+      track_view: {
+        Args: {
+          p_household_id: UUID;
+          p_entity_type: "inventory_item" | "recipe" | "memory" | "feeding";
+          p_entity_id: UUID;
+        };
+        Returns: void;
+      };
+      restore_feeding: { Args: { p_id: UUID }; Returns: void };
+      restore_inventory_item: { Args: { p_id: UUID }; Returns: void };
     };
     Enums: Record<string, never>;
   };

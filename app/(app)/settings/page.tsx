@@ -10,6 +10,7 @@ import { PushToggle } from "@/components/push/push-toggle";
 import { DeleteAccountButton } from "@/components/account/delete-account-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sendDigestNow, sendTestPush } from "@/lib/actions/notifications-test";
 import { signOut } from "@/lib/actions/auth";
 import { addBabyFromSettings } from "@/lib/actions/babies";
 import {
@@ -59,7 +60,7 @@ export default async function SettingsPage() {
     supabase
       .from("households")
       .select(
-        "name, theme_color, accent_emoji, default_freezer_expiry_days, default_fridge_expiry_days, default_pantry_expiry_days, activity_retention_days, shared_foods_opt_in",
+        "name, theme_color, accent_emoji, default_freezer_expiry_days, default_fridge_expiry_days, default_pantry_expiry_days, activity_retention_days, shared_foods_opt_in, timezone, list_density, theme_mode",
       )
       .eq("id", householdId)
       .maybeSingle(),
@@ -239,6 +240,33 @@ export default async function SettingsPage() {
                       defaultValue={household?.accent_emoji ?? "🥕"}
                       maxLength={4}
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="timezone" className="text-xs">
+                      Timezone
+                    </Label>
+                    <Input
+                      id="timezone"
+                      name="timezone"
+                      defaultValue={household?.timezone ?? "UTC"}
+                      placeholder="America/Los_Angeles"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="list_density" className="text-xs">
+                      Density
+                    </Label>
+                    <select
+                      id="list_density"
+                      name="list_density"
+                      defaultValue={household?.list_density ?? "comfortable"}
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="comfortable">Comfortable</option>
+                      <option value="compact">Compact</option>
+                    </select>
                   </div>
                 </div>
                 <Button type="submit" size="sm" className="w-full">
@@ -555,6 +583,18 @@ export default async function SettingsPage() {
                 Save notifications
               </Button>
             </form>
+            <div className="flex flex-wrap gap-2 border-t pt-3">
+              <form action={sendTestPush}>
+                <Button type="submit" size="sm" variant="outline">
+                  Send test push
+                </Button>
+              </form>
+              <form action={sendDigestNow}>
+                <Button type="submit" size="sm" variant="outline">
+                  Send digest now
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
 

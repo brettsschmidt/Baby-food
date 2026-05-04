@@ -73,6 +73,82 @@ export async function deleteRecipeStep(formData: FormData): Promise<void> {
   revalidatePath(`/recipes/${recipeId}`);
 }
 
+export async function setRecipeEquipment(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  await requireHousehold(supabase);
+  const id = String(formData.get("recipe_id") ?? "");
+  const equipment = String(formData.get("equipment") ?? "").trim() || null;
+  if (!id) return;
+  await supabase.from("recipes").update({ equipment }).eq("id", id);
+  revalidatePath(`/recipes/${id}`);
+}
+
+export async function cloneRecipe(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId, userId } = await requireHousehold(supabase);
+  const sourceId = String(formData.get("recipe_id") ?? "");
+  if (!sourceId) return;
+
+  const { data: src } = await supabase
+    .from("recipes")
+    .select(
+      "name, description, min_age_months, yield_quantity, yield_unit, prep_minutes, storage_default, default_expiry_days, steps, source_url, equipment, recipe_ingredients(ingredient, quantity, position)",
+    )
+    .eq("id", sourceId)
+    .eq("household_id", householdId)
+    .maybeSingle()
+    .returns<{
+      name: string;
+      description: string | null;
+      min_age_months: number | null;
+      yield_quantity: number | null;
+      yield_unit: "cube" | "jar" | "pouch" | "g" | "ml" | "serving" | null;
+      prep_minutes: number | null;
+      storage_default: "fridge" | "freezer" | "pantry" | null;
+      default_expiry_days: number | null;
+      steps: string | null;
+      source_url: string | null;
+      equipment: string | null;
+      recipe_ingredients: { ingredient: string; quantity: string | null; position: number }[];
+    }>();
+  if (!src) return;
+
+  const { data: copy, error } = await supabase
+    .from("recipes")
+    .insert({
+      household_id: householdId,
+      name: `${src.name} (variant)`,
+      description: src.description,
+      min_age_months: src.min_age_months,
+      yield_quantity: src.yield_quantity,
+      yield_unit: src.yield_unit ?? "cube",
+      prep_minutes: src.prep_minutes,
+      storage_default: src.storage_default ?? "freezer",
+      default_expiry_days: src.default_expiry_days,
+      steps: src.steps,
+      source_url: src.source_url,
+      equipment: src.equipment,
+      parent_recipe_id: sourceId,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error || !copy) return;
+
+  if (src.recipe_ingredients.length > 0) {
+    await supabase.from("recipe_ingredients").insert(
+      src.recipe_ingredients.map((i) => ({
+        recipe_id: copy.id,
+        ingredient: i.ingredient,
+        quantity: i.quantity,
+        position: i.position,
+      })),
+    );
+  }
+  revalidatePath("/recipes");
+  revalidatePath(`/recipes/${copy.id}`);
+}
+
 export async function importRecipeJson(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const { householdId, userId } = await requireHousehold(supabase);

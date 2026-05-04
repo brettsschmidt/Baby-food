@@ -16,7 +16,12 @@ import { ScaleIngredients } from "@/components/recipes/scale-ingredients";
 import { RecipeCostPanel } from "@/components/recipes/recipe-cost-panel";
 import { StarRating } from "@/components/feedings/star-rating";
 import { TagList } from "@/components/tags/tag-list";
-import { addSubstitution, deleteSubstitution } from "@/lib/actions/recipe-extras";
+import {
+  addSubstitution,
+  cloneRecipe,
+  deleteSubstitution,
+  setRecipeEquipment,
+} from "@/lib/actions/recipe-extras";
 import { createClient } from "@/lib/supabase/server";
 import { getHouseholdSettings, requireHousehold } from "@/lib/queries/household";
 import { lookupNutrition } from "@/lib/nutrition";
@@ -49,13 +54,14 @@ export default async function RecipeDetailPage({
     steps: string | null;
     source_url: string | null;
     photo_path: string | null;
+    equipment: string | null;
     recipe_ingredients: { id: string; ingredient: string; quantity: string | null; position: number }[];
   };
 
   const { data: recipe } = await supabase
     .from("recipes")
     .select(
-      "id, name, description, min_age_months, yield_quantity, yield_unit, prep_minutes, storage_default, default_expiry_days, steps, source_url, photo_path, recipe_ingredients(id, ingredient, quantity, position)",
+      "id, name, description, min_age_months, yield_quantity, yield_unit, prep_minutes, storage_default, default_expiry_days, steps, source_url, photo_path, equipment, recipe_ingredients(id, ingredient, quantity, position)",
     )
     .eq("id", id)
     .eq("household_id", householdId)
@@ -223,10 +229,40 @@ export default async function RecipeDetailPage({
           </CardContent>
         </Card>
 
-        <div className="flex items-center justify-end">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Equipment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form action={setRecipeEquipment} className="flex gap-2">
+              <input type="hidden" name="recipe_id" value={recipe.id} />
+              <Input
+                name="equipment"
+                placeholder="Steamer basket, blender, ice cube tray…"
+                defaultValue={recipe.equipment ?? ""}
+              />
+              <Button type="submit" size="sm">
+                Save
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <form action={cloneRecipe}>
+            <input type="hidden" name="recipe_id" value={recipe.id} />
+            <Button type="submit" variant="outline" size="sm">
+              Clone as variant
+            </Button>
+          </form>
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/print/recipe/${recipe.id}`} target="_blank">
+              Print card
+            </Link>
+          </Button>
           <Button asChild variant="ghost" size="sm">
             <a href={`/api/recipes/${recipe.id}/export`} download>
-              Export recipe as JSON
+              Export JSON
             </a>
           </Button>
         </div>
