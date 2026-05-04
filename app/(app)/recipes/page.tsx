@@ -26,12 +26,17 @@ export default async function RecipesPage() {
       <AppHeader
         title="Recipes"
         action={
-          <Button asChild size="sm">
-            <Link href="/recipes/new">
-              <Plus className="h-4 w-4" />
-              New
-            </Link>
-          </Button>
+          <>
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/recipes/import">Import</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/recipes/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                New
+              </Link>
+            </Button>
+          </>
         }
       />
       <div className="flex-1 space-y-2 px-4 py-4 pb-8">

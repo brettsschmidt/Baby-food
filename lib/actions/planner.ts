@@ -73,28 +73,52 @@ export async function createPrepPlan(formData: FormData): Promise<void> {
   const unitRaw = String(formData.get("unit") ?? "cube");
   const unit = UNITS.includes(unitRaw as Unit) ? (unitRaw as Unit) : "cube";
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const recurrenceRaw = String(formData.get("recurrence") ?? "").trim();
+  const recurrence =
+    recurrenceRaw === "weekly" || recurrenceRaw === "biweekly"
+      ? (recurrenceRaw as "weekly" | "biweekly")
+      : null;
+  const untilRaw = String(formData.get("recurrence_until") ?? "").trim();
+  const recurrenceUntil = untilRaw || null;
 
   if (!scheduledFor || !food || quantity <= 0) throw new Error("Missing fields");
 
-  const { data: plan, error } = await supabase
+  // Build the date series for the recurrence (capped to 26 occurrences).
+  const dates: string[] = [scheduledFor];
+  if (recurrence) {
+    const stepDays = recurrence === "weekly" ? 7 : 14;
+    const stop = recurrenceUntil ? new Date(recurrenceUntil) : addDaysFn(new Date(scheduledFor), 90);
+    let cursor = addDaysFn(new Date(scheduledFor), stepDays);
+    while (cursor <= stop && dates.length < 26) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor = addDaysFn(cursor, stepDays);
+    }
+  }
+
+  const { data: created, error } = await supabase
     .from("prep_plans")
-    .insert({
-      household_id: householdId,
-      scheduled_for: scheduledFor,
-      notes: notes ?? food,
-      created_by: userId,
-    })
-    .select("id")
-    .single();
+    .insert(
+      dates.map((d) => ({
+        household_id: householdId,
+        scheduled_for: d,
+        notes: notes ?? food,
+        recurrence,
+        recurrence_until: recurrenceUntil,
+        created_by: userId,
+      })),
+    )
+    .select("id");
 
-  if (error || !plan) throw new Error(error?.message ?? "Failed");
+  if (error || !created || created.length === 0) throw new Error(error?.message ?? "Failed");
 
-  await supabase.from("prep_plan_items").insert({
-    prep_plan_id: plan.id,
-    planned_quantity: quantity,
-    unit,
-    food_id: null,
-  });
+  await supabase.from("prep_plan_items").insert(
+    created.map((p) => ({
+      prep_plan_id: p.id,
+      planned_quantity: quantity,
+      unit,
+      food_id: null,
+    })),
+  );
 
   revalidatePath("/planner");
   revalidatePath("/dashboard");

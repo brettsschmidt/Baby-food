@@ -96,16 +96,27 @@ export default async function NewInventoryItemPage() {
             <Input id="expiry_date" name="expiry_date" type="date" data-expiry-input />
           </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="low_stock_threshold">Warn when below</Label>
-          <Input
-            id="low_stock_threshold"
-            name="low_stock_threshold"
-            type="number"
-            min="0"
-            step="1"
-            placeholder="e.g. 2"
-          />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label htmlFor="low_stock_threshold">Warn when below</Label>
+            <Input
+              id="low_stock_threshold"
+              name="low_stock_threshold"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 2"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sub_location">Sub-location</Label>
+            <Input
+              id="sub_location"
+              name="sub_location"
+              placeholder="Drawer 1"
+              autoComplete="off"
+            />
+          </div>
         </div>
         <PhotoField name="photo_path" label="Photo (optional)" />
         <div className="space-y-2">

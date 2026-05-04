@@ -39,9 +39,27 @@ export async function notifyHousehold(
     .select("user_id")
     .eq("household_id", householdId);
 
-  const userIds = (members ?? [])
+  let userIds = (members ?? [])
     .map((m) => m.user_id)
     .filter((id) => id !== excludeUserId);
+
+  if (userIds.length > 0) {
+    const { data: prefs } = await admin
+      .from("household_member_prefs")
+      .select("user_id, quiet_hours_start, quiet_hours_end")
+      .eq("household_id", householdId)
+      .in("user_id", userIds);
+    const hourNow = new Date().getUTCHours();
+    const blocked = new Set<string>();
+    for (const p of prefs ?? []) {
+      if (p.quiet_hours_start == null || p.quiet_hours_end == null) continue;
+      const a = p.quiet_hours_start;
+      const b = p.quiet_hours_end;
+      const inWindow = a <= b ? hourNow >= a && hourNow < b : hourNow >= a || hourNow < b;
+      if (inWindow) blocked.add(p.user_id);
+    }
+    userIds = userIds.filter((id) => !blocked.has(id));
+  }
 
   if (userIds.length === 0) return;
 

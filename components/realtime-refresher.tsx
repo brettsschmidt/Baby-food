@@ -8,18 +8,27 @@ import { createClient } from "@/lib/supabase/client";
 type TableName =
   | "feedings"
   | "feeding_items"
+  | "feeding_comments"
+  | "feeding_ratings"
   | "inventory_items"
   | "inventory_movements"
   | "shopping_list_items"
   | "activity_log"
+  | "activity_reactions"
   | "recipes"
+  | "recipe_ratings"
   | "growth_measurements"
   | "sleep_logs"
   | "diaper_logs"
   | "milestones"
   | "supplement_logs"
   | "memories"
-  | "recipe_collections";
+  | "recipe_collections"
+  | "sticky_notes"
+  | "meal_plans"
+  | "caregiver_shifts"
+  | "trend_annotations"
+  | "day_notes";
 
 /**
  * Subscribes to Postgres changes on the given tables for the current

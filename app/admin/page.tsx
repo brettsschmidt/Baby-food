@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ForceRefresh } from "@/components/admin/force-refresh";
+import { clearErrorLogs, clearTimingLogs } from "@/lib/actions/admin";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { formatBytes } from "@/lib/queries/storage";
@@ -122,6 +125,30 @@ export default async function AdminPage() {
               </li>
             ))}
           </ul>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Maintenance</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <ForceRefresh />
+          <form action={clearErrorLogs}>
+            <Button type="submit" size="sm" variant="outline" className="text-destructive">
+              Clear error logs
+            </Button>
+          </form>
+          <form action={clearTimingLogs}>
+            <Button type="submit" size="sm" variant="outline" className="text-destructive">
+              Clear timing logs
+            </Button>
+          </form>
+          <Button asChild size="sm" variant="outline">
+            <a href="/api/health" target="_blank" rel="noreferrer">
+              Health check
+            </a>
+          </Button>
         </CardContent>
       </Card>
 
