@@ -1,10 +1,18 @@
 import { Baby, Droplets, Moon } from "lucide-react";
-import { differenceInMinutes, format, isToday, isYesterday } from "date-fns";
+import {
+  differenceInMinutes,
+  format,
+  isToday,
+  isYesterday,
+  startOfDay,
+  subDays,
+} from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sparkline } from "@/components/growth/sparkline";
 import { RealtimeRefresher } from "@/components/realtime-refresher";
 import {
   deleteDiaper,
@@ -45,14 +53,47 @@ export default async function CarePage() {
       .select("id, changed_at, kind, notes")
       .eq("baby_id", baby.id)
       .order("changed_at", { ascending: false })
-      .limit(40),
+      .limit(120),
     supabase
       .from("sleep_logs")
       .select("id, started_at, ended_at, kind, notes")
       .eq("baby_id", baby.id)
       .order("started_at", { ascending: false })
-      .limit(20),
+      .limit(80),
   ]);
+
+  // Sleep totals per day (last 14 days)
+  const dayKeys = Array.from({ length: 14 }, (_, i) =>
+    format(startOfDay(subDays(new Date(), 13 - i)), "yyyy-MM-dd"),
+  );
+  const sleepByDay = new Map<string, number>(dayKeys.map((k) => [k, 0]));
+  for (const s of sleeps ?? []) {
+    if (!s.ended_at) continue;
+    const key = format(new Date(s.started_at), "yyyy-MM-dd");
+    if (sleepByDay.has(key)) {
+      sleepByDay.set(
+        key,
+        sleepByDay.get(key)! + differenceInMinutes(new Date(s.ended_at), new Date(s.started_at)) / 60,
+      );
+    }
+  }
+  const sleepPoints = Array.from(sleepByDay.values()).map((v, i) => ({
+    x: i,
+    y: Number(v.toFixed(1)),
+  }));
+
+  // Diaper change frequency: count per day for the last 14 days
+  const diaperByDay = new Map<string, number>(dayKeys.map((k) => [k, 0]));
+  for (const d of diapers ?? []) {
+    const key = format(new Date(d.changed_at), "yyyy-MM-dd");
+    if (diaperByDay.has(key)) diaperByDay.set(key, diaperByDay.get(key)! + 1);
+  }
+  const diaperAvg =
+    Array.from(diaperByDay.values()).reduce((a, b) => a + b, 0) / dayKeys.length;
+  const diaperPoints = Array.from(diaperByDay.values()).map((v, i) => ({
+    x: i,
+    y: v,
+  }));
 
   const activeSleep = sleeps?.find((s) => !s.ended_at);
 
@@ -134,6 +175,19 @@ export default async function CarePage() {
                   })}
               </ul>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Sleep & diaper trends (14d)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Sparkline points={sleepPoints} label="Sleep hours / day" unit="h" />
+            <Sparkline points={diaperPoints} label="Diaper changes / day" unit="" />
+            <p className="text-xs text-muted-foreground">
+              Avg {diaperAvg.toFixed(1)} changes/day
+            </p>
           </CardContent>
         </Card>
 

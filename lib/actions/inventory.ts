@@ -28,6 +28,7 @@ export async function createInventoryItem(formData: FormData): Promise<void> {
   const lowStockRaw = String(formData.get("low_stock_threshold") ?? "");
   const lowStock = lowStockRaw ? Number(lowStockRaw) : null;
   const photoPath = String(formData.get("photo_path") ?? "") || null;
+  const subLocation = String(formData.get("sub_location") ?? "").trim() || null;
 
   if (!name) throw new Error("Name required");
   if (Number.isNaN(quantity) || quantity < 0) throw new Error("Invalid quantity");
@@ -63,6 +64,7 @@ export async function createInventoryItem(formData: FormData): Promise<void> {
       notes,
       low_stock_threshold: lowStock,
       photo_path: photoPath,
+      sub_location: subLocation,
     })
     .select("id")
     .single();
@@ -147,10 +149,35 @@ export async function adjustInventoryItem(formData: FormData): Promise<void> {
     }
   }
 
+  // Auto-add to shopping list when low stock and no pending entry exists.
+  if (
+    item &&
+    item.name &&
+    item.low_stock_threshold != null &&
+    item.quantity <= item.low_stock_threshold
+  ) {
+    const { data: existingShop } = await supabase
+      .from("shopping_list_items")
+      .select("id")
+      .eq("household_id", householdId)
+      .ilike("text", item.name)
+      .is("completed_at", null)
+      .maybeSingle();
+    if (!existingShop) {
+      await supabase.from("shopping_list_items").insert({
+        household_id: householdId,
+        text: item.name,
+        quantity: "low stock",
+        created_by: userId,
+      });
+    }
+  }
+
   revalidatePath("/inventory");
   revalidatePath(`/inventory/${id}`);
   revalidatePath("/dashboard");
   revalidatePath("/planner");
+  revalidatePath("/shopping");
 }
 
 export async function archiveInventoryItem(formData: FormData): Promise<void> {

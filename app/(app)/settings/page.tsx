@@ -10,6 +10,7 @@ import { PushToggle } from "@/components/push/push-toggle";
 import { DeleteAccountButton } from "@/components/account/delete-account-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sendDigestNow, sendTestPush } from "@/lib/actions/notifications-test";
 import { signOut } from "@/lib/actions/auth";
 import { addBabyFromSettings } from "@/lib/actions/babies";
 import {
@@ -59,7 +60,7 @@ export default async function SettingsPage() {
     supabase
       .from("households")
       .select(
-        "name, theme_color, accent_emoji, default_freezer_expiry_days, default_fridge_expiry_days, default_pantry_expiry_days, activity_retention_days, shared_foods_opt_in",
+        "name, theme_color, accent_emoji, default_freezer_expiry_days, default_fridge_expiry_days, default_pantry_expiry_days, activity_retention_days, shared_foods_opt_in, timezone, list_density, theme_mode",
       )
       .eq("id", householdId)
       .maybeSingle(),
@@ -81,7 +82,7 @@ export default async function SettingsPage() {
     supabase
       .from("household_member_prefs")
       .select(
-        "notify_on_partner_log, notify_on_low_stock, notify_weekly_digest, digest_send_dow, digest_send_hour",
+        "notify_on_partner_log, notify_on_low_stock, notify_weekly_digest, digest_send_dow, digest_send_hour, quiet_hours_start, quiet_hours_end",
       )
       .eq("household_id", householdId)
       .eq("user_id", userId)
@@ -151,9 +152,49 @@ export default async function SettingsPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/meals">
+                <FileText className="h-4 w-4" /> Today&apos;s meals
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/feedings/calendar">
+                <FileText className="h-4 w-4" /> Feeding calendar
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/timer">
+                <FileText className="h-4 w-4" /> Kitchen timer
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/inventory/import">
+                <FileText className="h-4 w-4" /> Bulk import inventory
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
               <a href="/api/data/export" download>
                 <FileText className="h-4 w-4" /> Export all data (ZIP)
               </a>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/insights/waste">
+                <FileText className="h-4 w-4" /> Waste analytics
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/print/monthly">
+                <FileText className="h-4 w-4" /> Monthly recap (print)
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/print/meal-plan">
+                <FileText className="h-4 w-4" /> Weekly meal plan (print)
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/feedings/import">
+                <FileText className="h-4 w-4" /> Import feedings (CSV)
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -199,6 +240,33 @@ export default async function SettingsPage() {
                       defaultValue={household?.accent_emoji ?? "🥕"}
                       maxLength={4}
                     />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="timezone" className="text-xs">
+                      Timezone
+                    </Label>
+                    <Input
+                      id="timezone"
+                      name="timezone"
+                      defaultValue={household?.timezone ?? "UTC"}
+                      placeholder="America/Los_Angeles"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="list_density" className="text-xs">
+                      Density
+                    </Label>
+                    <select
+                      id="list_density"
+                      name="list_density"
+                      defaultValue={household?.list_density ?? "comfortable"}
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="comfortable">Comfortable</option>
+                      <option value="compact">Compact</option>
+                    </select>
                   </div>
                 </div>
                 <Button type="submit" size="sm" className="w-full">
@@ -481,10 +549,52 @@ export default async function SettingsPage() {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-2 border-t pt-2">
+                <div className="space-y-1">
+                  <Label htmlFor="quiet_hours_start" className="text-xs">
+                    Quiet hours start (UTC)
+                  </Label>
+                  <Input
+                    id="quiet_hours_start"
+                    name="quiet_hours_start"
+                    type="number"
+                    min="0"
+                    max="23"
+                    defaultValue={prefs?.quiet_hours_start ?? ""}
+                    placeholder="22"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="quiet_hours_end" className="text-xs">
+                    Quiet hours end
+                  </Label>
+                  <Input
+                    id="quiet_hours_end"
+                    name="quiet_hours_end"
+                    type="number"
+                    min="0"
+                    max="23"
+                    defaultValue={prefs?.quiet_hours_end ?? ""}
+                    placeholder="7"
+                  />
+                </div>
+              </div>
               <Button type="submit" size="sm" className="w-full">
                 Save notifications
               </Button>
             </form>
+            <div className="flex flex-wrap gap-2 border-t pt-3">
+              <form action={sendTestPush}>
+                <Button type="submit" size="sm" variant="outline">
+                  Send test push
+                </Button>
+              </form>
+              <form action={sendDigestNow}>
+                <Button type="submit" size="sm" variant="outline">
+                  Send digest now
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
 

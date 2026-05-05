@@ -22,6 +22,8 @@ export async function updateHouseholdTheme(formData: FormData): Promise<void> {
     name?: string;
     theme_mode?: "light" | "dark" | "system";
     units_preference?: "metric" | "imperial";
+    timezone?: string;
+    list_density?: "comfortable" | "compact";
   } = {};
   if (themeColor) update.theme_color = themeColor;
   if (accentEmoji) update.accent_emoji = accentEmoji;
@@ -31,6 +33,12 @@ export async function updateHouseholdTheme(formData: FormData): Promise<void> {
   }
   if (unitsRaw === "metric" || unitsRaw === "imperial") {
     update.units_preference = unitsRaw;
+  }
+  const tz = String(formData.get("timezone") ?? "").trim();
+  if (tz) update.timezone = tz;
+  const densityRaw = String(formData.get("list_density") ?? "");
+  if (densityRaw === "comfortable" || densityRaw === "compact") {
+    update.list_density = densityRaw;
   }
   if (Object.keys(update).length === 0) return;
 
@@ -118,6 +126,10 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
   const digest = formData.get("notify_weekly_digest") === "on";
   const dow = Number(formData.get("digest_send_dow") ?? 0);
   const hour = Number(formData.get("digest_send_hour") ?? 9);
+  const qhStartRaw = String(formData.get("quiet_hours_start") ?? "");
+  const qhEndRaw = String(formData.get("quiet_hours_end") ?? "");
+  const qhStart = qhStartRaw ? Number(qhStartRaw) : null;
+  const qhEnd = qhEndRaw ? Number(qhEndRaw) : null;
 
   await supabase
     .from("household_member_prefs")
@@ -130,6 +142,8 @@ export async function updateNotifyPrefs(formData: FormData): Promise<void> {
         notify_weekly_digest: digest,
         digest_send_dow: dow,
         digest_send_hour: hour,
+        quiet_hours_start: qhStart,
+        quiet_hours_end: qhEnd,
       },
       { onConflict: "household_id,user_id" },
     );

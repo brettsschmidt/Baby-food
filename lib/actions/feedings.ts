@@ -206,7 +206,7 @@ export async function logFeeding(formData: FormData): Promise<void> {
 
 export async function updateFeeding(formData: FormData): Promise<void> {
   const supabase = await createClient();
-  const { householdId } = await requireHousehold(supabase);
+  const { householdId, userId } = await requireHousehold(supabase);
 
   const id = String(formData.get("id"));
   if (!id) throw new Error("Missing id");
@@ -217,6 +217,13 @@ export async function updateFeeding(formData: FormData): Promise<void> {
   const mood = MOODS.includes(moodRaw as Mood) ? (moodRaw as Mood) : null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
 
+  // Snapshot previous values for the audit trail.
+  const { data: before } = await supabase
+    .from("feedings")
+    .select("fed_at, mood, notes")
+    .eq("id", id)
+    .maybeSingle();
+
   await supabase
     .from("feedings")
     .update({
@@ -225,6 +232,31 @@ export async function updateFeeding(formData: FormData): Promise<void> {
       notes,
     })
     .eq("id", id);
+
+  if (before) {
+    const edits: { field: string; oldVal: string | null; newVal: string | null }[] = [];
+    if (fedAt && before.fed_at !== fedAt) {
+      edits.push({ field: "fed_at", oldVal: before.fed_at, newVal: fedAt });
+    }
+    if (before.mood !== mood) {
+      edits.push({ field: "mood", oldVal: before.mood, newVal: mood });
+    }
+    if ((before.notes ?? null) !== notes) {
+      edits.push({ field: "notes", oldVal: before.notes ?? null, newVal: notes });
+    }
+    if (edits.length > 0) {
+      await supabase.from("feeding_edits").insert(
+        edits.map((e) => ({
+          feeding_id: id,
+          household_id: householdId,
+          editor_id: userId,
+          field: e.field,
+          old_value: e.oldVal,
+          new_value: e.newVal,
+        })),
+      );
+    }
+  }
 
   await supabase.rpc("log_activity", {
     p_household_id: householdId,

@@ -60,7 +60,7 @@ export async function getMyHouseholds(supabase: SupabaseServerClient) {
 export async function getBabies(supabase: SupabaseServerClient, householdId: string) {
   const { data } = await supabase
     .from("babies")
-    .select("id, name, birth_date")
+    .select("id, name, birth_date, photo_path, theme_color")
     .eq("household_id", householdId)
     .order("created_at", { ascending: true });
   return data ?? [];
