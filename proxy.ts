@@ -7,6 +7,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  runtime: "edge",
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|icons|manifest.webmanifest|sw.js|workbox-.*\\.js|.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

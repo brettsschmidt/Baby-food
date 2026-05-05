@@ -59,3 +59,9 @@ public/swe-worker-*.js
 # playwright auth state
 e2e/.auth/*
 !e2e/.auth/.gitkeep
+
+# cloudflare / opennext
+.open-next/
+.wrangler/
+.dev.vars
+cloudflare-env.d.ts

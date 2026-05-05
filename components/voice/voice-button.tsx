@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Mic, MicOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -50,9 +50,13 @@ function getRecognition(): SpeechRecognition | null {
 }
 
 export function VoiceButton() {
-  const [supported] = useState(() => !!getRecognition());
+  const [supported, setSupported] = useState(false);
   const [busy, setBusy] = useState(false);
   const recRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    setSupported(!!getRecognition());
+  }, []);
 
   if (!supported) return null;
 

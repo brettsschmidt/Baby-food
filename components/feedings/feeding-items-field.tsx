@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,15 +15,15 @@ interface InventoryOption {
 }
 
 interface ItemRow {
-  id: string;
+  id: number;
   inventoryItemId: string;
   customFood: string;
   quantity: string;
   isFirstTry: boolean;
 }
 
-const empty = (): ItemRow => ({
-  id: crypto.randomUUID(),
+const blank = (id: number): ItemRow => ({
+  id,
   inventoryItemId: "",
   customFood: "",
   quantity: "1",
@@ -31,13 +31,14 @@ const empty = (): ItemRow => ({
 });
 
 export function FeedingItemsField({ inventory }: { inventory: InventoryOption[] }) {
-  const [rows, setRows] = useState<ItemRow[]>([empty()]);
+  const [rows, setRows] = useState<ItemRow[]>(() => [blank(0)]);
+  const nextId = useRef(1);
 
-  const update = (id: string, patch: Partial<ItemRow>) =>
+  const update = (id: number, patch: Partial<ItemRow>) =>
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  const remove = (id: string) =>
+  const remove = (id: number) =>
     setRows((rs) => (rs.length === 1 ? rs : rs.filter((r) => r.id !== id)));
-  const add = () => setRows((rs) => [...rs, empty()]);
+  const add = () => setRows((rs) => [...rs, blank(nextId.current++)]);
 
   return (
     <div className="space-y-3">

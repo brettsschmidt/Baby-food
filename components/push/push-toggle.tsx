@@ -25,18 +25,23 @@ function isSupported() {
 }
 
 export function PushToggle() {
-  const supported = isSupported();
+  const [supported, setSupported] = useState<boolean | null>(null);
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!supported) return;
+    const ok = isSupported();
+    setSupported(ok);
+    if (!ok) return;
     navigator.serviceWorker.ready.then(async (reg) => {
       const sub = await reg.pushManager.getSubscription();
       setSubscribed(!!sub);
     });
-  }, [supported]);
+  }, []);
 
+  if (supported === null) {
+    return <div aria-hidden="true" className="h-9" />;
+  }
   if (!supported) {
     return (
       <p className="text-xs text-muted-foreground">

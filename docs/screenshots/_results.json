@@ -1,0 +1,133 @@
+[
+  {
+    "name": "01-login",
+    "url": "http://localhost:3000/login",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "02-onboarding-resume",
+    "url": "http://localhost:3000/login",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/dashboard\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/dashboard\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "08-dashboard",
+    "url": "http://localhost:3000/dashboard",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "09-feedings",
+    "url": "http://localhost:3000/feedings",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "10-feedings-new",
+    "url": "http://localhost:3000/feedings",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/feedings/new\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/feedings/new\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "11-inventory",
+    "url": "http://localhost:3000/inventory",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "12-inventory-new",
+    "url": "http://localhost:3000/inventory/new",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "13-library",
+    "url": "http://localhost:3000/inventory/new",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/library\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/library\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "14-recipes",
+    "url": "http://localhost:3000/recipes",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "15-recipes-new",
+    "url": "http://localhost:3000/recipes/new",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "16-planner",
+    "url": "http://localhost:3000/planner",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "17-shopping",
+    "url": "http://localhost:3000/shopping",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "18-care",
+    "url": "http://localhost:3000/shopping",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/care\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/care\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "19-care-supplements",
+    "url": "http://localhost:3000/care/supplements",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "20-care-readiness",
+    "url": "http://localhost:3000/care/supplements",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/care/readiness\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/care/readiness\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "21-growth",
+    "url": "http://localhost:3000/growth",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "22-memories",
+    "url": "http://localhost:3000/memories",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "23-insights",
+    "url": "http://localhost:3000/memories",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/insights\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/insights\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  },
+  {
+    "name": "24-activity",
+    "url": "http://localhost:3000/activity",
+    "error": null,
+    "consoleErrors": []
+  },
+  {
+    "name": "25-settings",
+    "url": "http://localhost:3000/settings",
+    "error": null,
+    "consoleErrors": [
+      {
+        "type": "pageerror",
+        "msg": "Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:\n\n- A server/client branch `if (typeof window !== 'undefined')`.\n- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.\n- Date formatting in a user's locale which doesn't match the server.\n- External changing data without sending a snapshot of it along with the HTML.\n- Invalid HTML tag nesting.\n\nIt can also happen if the client has a browser extension installed which messes with the HTML before React loaded.\n\nhttps://react.dev/link/hydration-mismatch\n\n  ...\n    <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>\n      <LoadingBoundary name=\"settings/\" loading={null}>\n        <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>\n          <RedirectBoundary>\n            <RedirectErrorBoundary router={{...}}>\n              <InnerLayoutRouter url=\"/settings\" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} ...>\n                <SegmentViewNode type=\"page\" pagePath=\"(app)/sett...\">\n                  <SegmentTrieNode>\n                  <SettingsPage>\n                    <header>\n                    <div className=\"flex-1 spa...\">\n                      <div>\n                      <div>\n                      <div>\n                      <div>\n                      <div>\n                      <div>\n                      <Card>\n                        <div className=\"rounded-lg...\">\n                          <div>\n                          <CardContent>\n                            <div className=\"p-4 pt-0 s...\">\n                              <PushToggle>\n                                <_c type=\"button\" variant=\"outline\" onClick={function enable} disabled={false} ...>\n+                                 <button\n+                                   className={\"inline-flex items-center justify-center gap-2 whitespace-nowrap round...\"}\n+                                   ref={null}\n+                                   type=\"button\"\n+                                   onClick={function enable}\n+                                   disabled={false}\n+                                 >\n-                                 <p className=\"text-xs text-muted-foreground\">\n                              ...\n                      ...\n                ...\n              ...\n"
+      }
+    ]
+  },
+  {
+    "name": "26-settings-security",
+    "url": "http://localhost:3000/settings",
+    "error": "page.goto: net::ERR_ABORTED at http://localhost:3000/settings/security\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3000/settings/security\", waiting until \"load\"\u001b[22m\n",
+    "consoleErrors": []
+  }
+]
