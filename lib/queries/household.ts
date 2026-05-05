@@ -1,15 +1,37 @@
 import "server-only";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { createClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
-export async function requireHousehold(supabase: SupabaseServerClient) {
+const TOTP_PASS_COOKIE = "babyfood_2fa_passed";
+
+export async function requireUser(supabase: SupabaseServerClient) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // 2FA gate: if the user has a confirmed TOTP and hasn't passed it this session,
+  // bounce to /auth/2fa. (Don't loop if we're already there — callers in /auth/2fa
+  // should not invoke requireUser.)
+  const passed = (await cookies()).get(TOTP_PASS_COOKIE)?.value === "1";
+  if (!passed) {
+    const { data: row } = await supabase
+      .from("totp_secrets")
+      .select("confirmed_at")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (row?.confirmed_at) redirect("/auth/2fa");
+  }
+
+  return user;
+}
+
+export async function requireHousehold(supabase: SupabaseServerClient) {
+  const user = await requireUser(supabase);
 
   const { data: memberships } = await supabase
     .from("household_members")

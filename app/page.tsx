@@ -1,8 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/server";
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <div className="max-w-md space-y-6">
