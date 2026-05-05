@@ -25,6 +25,58 @@ export async function signInWithMagicLink(formData: FormData): Promise<void> {
   redirect(`/verify?email=${encodeURIComponent(email)}`);
 }
 
+export async function signInWithPassword(formData: FormData): Promise<void> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  if (!email || !password) redirect("/login?error=missing_fields");
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    if (error.status === 429) redirect("/login?error=rate_limited");
+    redirect("/login?error=invalid_credentials");
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+export async function signUpWithPassword(formData: FormData): Promise<void> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (!email || !password) redirect("/signup?error=missing_fields");
+  if (password.length < 8) redirect("/signup?error=weak_password");
+  if (password !== confirm) redirect("/signup?error=password_mismatch");
+
+  const supabase = await createClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo: `${siteUrl}/auth/callback` },
+  });
+
+  if (error) {
+    if (error.status === 429) redirect("/signup?error=rate_limited");
+    if (error.message?.toLowerCase().includes("already")) {
+      redirect("/signup?error=already_registered");
+    }
+    redirect("/signup?error=signup_failed");
+  }
+
+  // If email confirmation is disabled in Supabase, signUp returns an active session
+  // and we can go straight to onboarding. Otherwise we land on /verify to wait for
+  // the confirmation email.
+  if (data.session) {
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
+  }
+  redirect(`/verify?email=${encodeURIComponent(email)}`);
+}
+
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
