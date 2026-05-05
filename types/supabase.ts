@@ -611,6 +611,7 @@ export interface Database {
     };
     Views: Record<string, never>;
     Functions: {
+      create_household: { Args: { p_name: string }; Returns: UUID };
       redeem_invite: { Args: { p_code: string }; Returns: UUID };
       log_activity: {
         Args: {
