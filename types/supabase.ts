@@ -313,6 +313,7 @@ export interface Database {
         kind: string;
         achieved_at: Timestamp;
         detail: string | null;
+        photo_path: string | null;
         created_at: Timestamp;
       }>;
       shared_foods: Table<{
