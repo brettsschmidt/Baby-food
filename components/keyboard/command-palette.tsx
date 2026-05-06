@@ -31,6 +31,7 @@ const ACTIONS: Action[] = [
   { label: "Shopping list", href: "/shopping", shortcut: "g s" },
   { label: "Insights", href: "/insights", shortcut: "g n" },
   { label: "Memories", href: "/memories", shortcut: "g o" },
+  { label: "Milestones", href: "/milestones" },
   { label: "Kitchen timer", href: "/timer", shortcut: "g t" },
   { label: "Search", href: "/search", shortcut: "/" },
   { label: "Settings", href: "/settings" },

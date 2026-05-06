@@ -18,6 +18,7 @@ import { ageInMonths, expiryStatus, relativeTime } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveBaby, requireHousehold } from "@/lib/queries/household";
 import { getFeedingStreak } from "@/lib/queries/milestones";
+import { getMilestoneItem } from "@/lib/milestones-catalog";
 import {
   getFirstTryAnniversaries,
   getMemoryOfTheDay,
@@ -243,10 +244,15 @@ export default async function DashboardPage() {
               </span>
             )}
             {latestMilestone && (
-              <span className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary">
+              <Link
+                href="/milestones"
+                className="flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-xs font-medium text-primary"
+              >
                 <Sparkles className="h-3 w-3" aria-hidden="true" />
-                {latestMilestone.detail ?? latestMilestone.kind}
-              </span>
+                {getMilestoneItem(latestMilestone.kind)?.label ??
+                  latestMilestone.detail ??
+                  latestMilestone.kind}
+              </Link>
             )}
             {winner && (
               <span className="flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-rose-900 dark:bg-rose-950 dark:text-rose-100">
