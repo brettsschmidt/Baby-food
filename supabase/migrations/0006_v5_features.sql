@@ -24,10 +24,11 @@ create table if not exists public.tags (
   entity_type text not null check (entity_type in ('food','recipe','memory','feeding','inventory_item')),
   entity_id uuid not null,
   label text not null,
-  created_at timestamptz not null default now(),
-  unique (household_id, entity_type, entity_id, lower(label))
+  created_at timestamptz not null default now()
 );
 
+create unique index if not exists tags_unique_idx
+  on public.tags(household_id, entity_type, entity_id, lower(label));
 create index if not exists tags_entity_idx on public.tags(entity_type, entity_id);
 create index if not exists tags_household_label_idx on public.tags(household_id, lower(label));
 

@@ -8,6 +8,16 @@ import { Button } from "@/components/ui/button";
 import { enqueue } from "@/lib/offline-queue";
 import { logFeeding } from "@/lib/actions/feedings";
 
+function isRedirect(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "digest" in err &&
+    typeof (err as { digest?: unknown }).digest === "string" &&
+    (err as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 function SubmitButton({ children }: { children: React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
@@ -43,6 +53,7 @@ export function FeedingForm({ children }: { children: React.ReactNode }) {
         try {
           await logFeeding(fd);
         } catch (err) {
+          if (isRedirect(err)) throw err;
           toast.error(err instanceof Error ? err.message : "Failed");
         } finally {
           setSubmitting(false);

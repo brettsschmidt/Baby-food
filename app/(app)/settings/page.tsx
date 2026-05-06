@@ -147,6 +147,11 @@ export default async function SettingsPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="w-full justify-start">
+              <Link href="/milestones">
+                <FileText className="h-4 w-4" /> Milestones
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full justify-start">
               <Link href="/recipes/collections">
                 <BookOpen className="h-4 w-4" /> Recipe collections
               </Link>

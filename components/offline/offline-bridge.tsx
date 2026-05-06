@@ -17,11 +17,13 @@ async function send(payload: Record<string, FormDataEntryValue | FormDataEntryVa
 
 export function OfflineBridge() {
   const [pending, setPending] = useState(0);
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [online, setOnline] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    setOnline(navigator.onLine);
+
     const refresh = async () => {
       const items = await listQueued();
       setPending(items.length);
@@ -46,7 +48,7 @@ export function OfflineBridge() {
     };
   }, []);
 
-  if (online && pending === 0) return null;
+  if (!mounted || (online && pending === 0)) return null;
 
   return (
     <div className="flex items-center justify-between rounded-md border bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
