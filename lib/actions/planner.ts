@@ -125,6 +125,89 @@ export async function createPrepPlan(formData: FormData): Promise<void> {
   redirect("/planner");
 }
 
+export async function updatePrepPlan(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId } = await requireHousehold(supabase);
+
+  const id = String(formData.get("id") ?? "");
+  const scheduledFor = String(formData.get("scheduled_for") ?? "");
+  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const quantity = Number(formData.get("planned_quantity") ?? 0);
+  const unitRaw = String(formData.get("unit") ?? "cube");
+  const unit = UNITS.includes(unitRaw as Unit) ? (unitRaw as Unit) : "cube";
+
+  if (!id || !scheduledFor || quantity <= 0) throw new Error("Missing fields");
+
+  const { data: existing } = await supabase
+    .from("prep_plans")
+    .select("status")
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (!existing) throw new Error("Not found");
+  if (existing.status === "done") throw new Error("Can't edit a completed prep");
+
+  const { error: updErr } = await supabase
+    .from("prep_plans")
+    .update({ scheduled_for: scheduledFor, notes })
+    .eq("id", id)
+    .eq("household_id", householdId);
+  if (updErr) throw new Error(updErr.message);
+
+  const { data: items } = await supabase
+    .from("prep_plan_items")
+    .select("id")
+    .eq("prep_plan_id", id)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (items && items[0]) {
+    await supabase
+      .from("prep_plan_items")
+      .update({ planned_quantity: quantity, unit })
+      .eq("id", items[0].id);
+  } else {
+    await supabase.from("prep_plan_items").insert({
+      prep_plan_id: id,
+      planned_quantity: quantity,
+      unit,
+      food_id: null,
+    });
+  }
+
+  revalidatePath("/planner");
+  revalidatePath(`/planner/${id}`);
+  revalidatePath("/dashboard");
+}
+
+export async function deletePrepPlan(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const { householdId } = await requireHousehold(supabase);
+
+  const id = String(formData.get("id") ?? "");
+  if (!id) throw new Error("Missing id");
+
+  const { data: existing } = await supabase
+    .from("prep_plans")
+    .select("status")
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (!existing) throw new Error("Not found");
+  if (existing.status === "done") throw new Error("Can't delete a completed prep");
+
+  const { error } = await supabase
+    .from("prep_plans")
+    .delete()
+    .eq("id", id)
+    .eq("household_id", householdId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/planner");
+  revalidatePath("/dashboard");
+  redirect("/planner");
+}
+
 export async function completePrepPlan(formData: FormData): Promise<void> {
   const supabase = await createClient();
   const { householdId, userId } = await requireHousehold(supabase);

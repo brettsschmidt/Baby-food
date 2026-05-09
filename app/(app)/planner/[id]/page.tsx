@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 
 import { AppHeader } from "@/components/nav/app-header";
@@ -9,9 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { completePrepPlan } from "@/lib/actions/planner";
+import { Textarea } from "@/components/ui/textarea";
+import { completePrepPlan, updatePrepPlan } from "@/lib/actions/planner";
 import { createClient } from "@/lib/supabase/server";
 import { requireHousehold } from "@/lib/queries/household";
+
+import { DeletePrepPlanButton } from "./delete-button";
 
 export default async function PrepPlanDetailPage({
   params,
@@ -95,6 +98,73 @@ export default async function PrepPlanDetailPage({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
+                <Pencil className="h-4 w-4 text-primary" /> Edit
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={updatePrepPlan} className="space-y-4">
+                <input type="hidden" name="id" value={plan.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="scheduled_for">Date</Label>
+                  <Input
+                    id="scheduled_for"
+                    name="scheduled_for"
+                    type="date"
+                    required
+                    defaultValue={plan.scheduled_for}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    name="notes"
+                    rows={2}
+                    defaultValue={plan.notes ?? ""}
+                    placeholder="What are you prepping?"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="planned_quantity">Quantity</Label>
+                    <Input
+                      id="planned_quantity"
+                      name="planned_quantity"
+                      type="number"
+                      min="1"
+                      required
+                      defaultValue={item?.planned_quantity ?? 12}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unit</Label>
+                    <select
+                      id="unit"
+                      name="unit"
+                      defaultValue={item?.unit ?? "cube"}
+                      className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
+                    >
+                      <option value="cube">cubes</option>
+                      <option value="jar">jars</option>
+                      <option value="pouch">pouches</option>
+                      <option value="g">g</option>
+                      <option value="ml">ml</option>
+                      <option value="serving">servings</option>
+                    </select>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full">
+                  Save changes
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {plan.status !== "done" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Mark as done
               </CardTitle>
             </CardHeader>
@@ -148,6 +218,12 @@ export default async function PrepPlanDetailPage({
               </form>
             </CardContent>
           </Card>
+        )}
+
+        {plan.status !== "done" && (
+          <div className="flex justify-end pt-2">
+            <DeletePrepPlanButton id={plan.id} />
+          </div>
         )}
       </div>
     </>
